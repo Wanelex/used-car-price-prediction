@@ -1,0 +1,164 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+.virtualenv/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Data files (large datasets should not be in git)
+data/raw/*.csv
+data/raw/*.xlsx
+data/raw/*.json
+data/interim/*.csv
+data/interim/*.pkl
+data/processed/*.csv
+data/processed/*.pkl
+data/processed/*.parquet
+
+# Keep README files in data directories
+!data/raw/README.md
+!data/interim/README.md
+!data/processed/README.md
+
+# Models (trained models are large, use DVC or model registry)
+models/*.pkl
+models/*.joblib
+models/*.h5
+models/*.pt
+models/*.pth
+experiments/mlruns/
+mlruns/
+
+# Logs
+*.log
+logs/
+*.out
+*.err
+
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+credentials.json
+kaggle.json
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre
+.pyre/
+
+# Docker
+*.tar
+docker-compose.override.yml
+
+# DVC (Data Version Control)
+.dvc/
+.dvc/cache/
+
+# Experiment outputs
+experiments/
+outputs/
+wandb/
+tensorboard_logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Requirements freeze (optional, keep if you want exact versions)
+# requirements-freeze.txt
+
+# Compiled source
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Archives (unless needed for release)
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Streamlit
+.streamlit/secrets.toml
+.streamlit/config.toml
+
+# Documentation (optional - uncomment if you don't want to track these)
+DEVELOPMENT_GUIDE.md
+TECH_STACK.md
+KAGGLE_API_SETUP.md
+DATASET_ACCESS_FIX.md
