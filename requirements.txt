@@ -38,3 +38,9 @@ loguru
 # Data Processing
 beautifulsoup4
 fake-useragent
+
+# Day 2: Browser Automation
+nodriver
+playwright
+playwright-stealth
+aiohttp

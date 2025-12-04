@@ -1,7 +1,3 @@
-"""
-Rate Limiting System
-Per-domain rate limiting to avoid being blocked
-"""
 import time
 import asyncio
 from typing import Dict, Optional
