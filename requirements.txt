@@ -44,3 +44,9 @@ nodriver
 playwright
 playwright-stealth
 aiohttp
+
+# Day 4: CAPTCHA Solving
+2captcha-python
+python-anticaptcha
+tenacity
+backoff

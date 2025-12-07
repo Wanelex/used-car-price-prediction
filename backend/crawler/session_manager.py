@@ -103,14 +103,14 @@ class SessionManager:
         Returns:
             Session data
         """
-        # Try to find existing session for this domain
+        # Try finfing anexisting session for this domain
         session_id = self._generate_session_id(domain)
         session_data = self.load_session(session_id)
 
         if session_data:
             return session_data
 
-        # Create new session
+        # Create new sesion
         return self.load_session(self.create_session(domain))
 
     def save_cookies(self, session_id: str, cookies: List[Dict[str, Any]]):
