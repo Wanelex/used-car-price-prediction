@@ -133,7 +133,12 @@ class BrowserEngine:
             logger.info("Browser started successfully with stealth protection")
 
         except Exception as e:
-            logger.error(f"Failed to start browser: {str(e)}")
+            import traceback
+            error_msg = str(e) if str(e) else f"{type(e).__name__} (no message)"
+            logger.error(f"Failed to start browser: {error_msg}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            logger.error(f"Exception repr: {repr(e)}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             raise
 
     async def close(self):

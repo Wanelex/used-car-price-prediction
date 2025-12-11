@@ -50,3 +50,10 @@ aiohttp
 python-anticaptcha
 tenacity
 backoff
+
+# Day 5: API & Monitoring
+websockets
+motor
+redis
+openpyxl
+cryptography
