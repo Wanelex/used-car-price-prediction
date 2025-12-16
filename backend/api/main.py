@@ -21,7 +21,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config.settings import settings
 from api.models.schemas import HealthCheck
-from api.routes import crawl, jobs
+from api.routes import crawl, jobs, listings
 
 
 # WebSocket connection manager
@@ -96,6 +96,7 @@ app.add_middleware(
 # Include routers
 app.include_router(crawl.router, prefix="/api/v1", tags=["Crawling"])
 app.include_router(jobs.router, prefix="/api/v1", tags=["Jobs"])
+app.include_router(listings.router, prefix="/api/v1", tags=["Listings"])
 
 
 @app.get("/", response_model=dict)

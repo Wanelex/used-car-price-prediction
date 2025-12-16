@@ -253,7 +253,23 @@ class CaptchaSolver:
         Returns:
             Solution token or None if failed
         """
+        import re
+
         logger.info(f"Solving Cloudflare Turnstile for {url}")
+
+        # Validate sitekey format before sending to solver
+        if not sitekey or not isinstance(sitekey, str):
+            logger.error(f"Invalid sitekey: not a string or empty")
+            return None
+
+        # Cloudflare sitekeys should be alphanumeric only, no special characters
+        # Valid format: alphanumeric string, typically 20-40 chars
+        if not re.match(r'^[0-9a-zA-Z]{20,}$', sitekey):
+            logger.error(f"Invalid sitekey format: {sitekey}")
+            logger.error(f"Sitekey must be alphanumeric only, got: {repr(sitekey)}")
+            return None
+
+        logger.info(f"Sitekey validation passed: {sitekey[:20]}...")
 
         # Try 2Captcha first (has best Turnstile support)
         if self.twocaptcha_client:

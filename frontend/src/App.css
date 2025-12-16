@@ -43,21 +43,38 @@ body {
 .app-header {
   background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
   color: white;
-  padding: 2rem;
-  text-align: center;
+  padding: 1rem 2rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header-logo {
+  height: 60px;
+  width: auto;
+  object-fit: contain;
+}
+
+.header-text {
+  display: flex;
+  flex-direction: column;
 }
 
 .app-header h1 {
   margin: 0;
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: 700;
-  margin-bottom: 0.5rem;
 }
 
 .app-header p {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1rem;
   opacity: 0.9;
 }
 
@@ -641,8 +658,16 @@ body {
 
 /* Responsive */
 @media (max-width: 768px) {
+  .header-logo {
+    height: 45px;
+  }
+
   .app-header h1 {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
+  }
+
+  .app-header p {
+    font-size: 0.85rem;
   }
 
   .app-main {

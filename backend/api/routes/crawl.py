@@ -61,6 +61,7 @@ async def perform_crawl(job_id: str, request: CrawlRequest):
                 "metadata": result.get("metadata"),
                 "images": result.get("images", []),
                 "links": result.get("links", []),
+                "sahibinden_listing": result.get("sahibinden_listing"),  # FIX: Store sahibinden data
                 "final_url": result.get("url"),
                 "response_time": result.get("response_time"),
                 "captcha_solved": result.get("captcha_solved", False),

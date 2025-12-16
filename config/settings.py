@@ -10,15 +10,26 @@ class Settings(BaseSettings):
     API_PORT: int = 8000
     DEBUG: bool = True
 
-    # Database Settings
-    MONGODB_URL: str = "mongodb://localhost:27017"
-    MONGODB_DB_NAME: str = "crawler_db"
+    # Database Settings - Choose one: firebase, postgresql, or mongodb
+    DATABASE_TYPE: str = "firebase"  # Options: "firebase", "postgresql", "mongodb"
 
+    # Firebase Configuration
+    FIREBASE_CREDENTIALS_PATH: str = "./serviceAccountKey.json"  # Path to Firebase service account key
+
+    # PostgreSQL Configuration (if DATABASE_TYPE = "postgresql")
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
     POSTGRES_USER: str = "crawler_user"
     POSTGRES_PASSWORD: str = "crawler_pass"
     POSTGRES_DB: str = "crawler_jobs"
+
+    @property
+    def SQLALCHEMY_DATABASE_URL(self) -> str:
+        return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+
+    # MongoDB Configuration (if DATABASE_TYPE = "mongodb")
+    MONGODB_URL: str = "mongodb://localhost:27017"
+    MONGODB_DB_NAME: str = "crawler_db"
 
     # Redis Settings
     REDIS_HOST: str = "localhost"
@@ -53,6 +64,16 @@ class Settings(BaseSettings):
 
     # Data Export
     EXPORT_DIR: str = "./data/exports"
+
+    # Image Storage
+    IMAGE_STORAGE_PATH: str = "./data/images"
+    MAX_IMAGE_SIZE_MB: int = 10
+    SUPPORTED_IMAGE_FORMATS: list[str] = ["jpg", "jpeg", "png", "webp"]
+    IMAGE_DOWNLOAD_TIMEOUT: int = 30
+
+    # Data Quality Thresholds
+    MIN_REQUIRED_FIELDS: list[str] = ["listing_id", "brand", "model", "year", "price"]
+    MIN_QUALITY_SCORE: float = 0.5  # 50% completeness threshold
 
     # Security
     SECRET_KEY: str = "your-secret-key-change-in-production"

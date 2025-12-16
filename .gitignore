@@ -83,6 +83,7 @@ logs/
 *.key
 credentials.json
 kaggle.json
+serviceAccountKey.json
 
 # Testing
 .pytest_cache/

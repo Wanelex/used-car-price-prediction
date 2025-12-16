@@ -21,8 +21,13 @@ function App() {
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1>CarVisor</h1>
-        <p>See Beyond the Listing</p>
+        <div className="header-content">
+          <img src="/sitelogo.png" alt="CarVisor Logo" className="header-logo" />
+          <div className="header-text">
+            <h1>CarVisor</h1>
+            <p>See Beyond the Listing</p>
+          </div>
+        </div>
       </header>
 
       <main className="app-main">
