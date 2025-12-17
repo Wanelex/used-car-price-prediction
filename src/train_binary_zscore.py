@@ -3,6 +3,7 @@ import numpy as np
 import pickle
 import os
 import re
+from sklearn.impute import SimpleImputer
 from lightgbm import LGBMClassifier, LGBMRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
@@ -60,12 +61,13 @@ cat_features = [
     "Arac Tip"
 ]
 
-df[num_features] = df[num_features].fillna(df[num_features].median())
+imputer = SimpleImputer(strategy="median")
+df[num_features] = imputer.fit_transform(df[num_features])
 
 for col in cat_features:
     df[col] = df[col].astype("category")
 
-# 1) PRICE REGRESSION
+
 
 reg_features = num_features + cat_features
 X_reg = df[reg_features]
@@ -93,7 +95,7 @@ reg_model.fit(
 
 df["predicted_price"] = reg_model.predict(X_reg)
 
-# PRICE / PERFORMANCE (AYNI)
+
 df["price_perf"] = df["Fiyat"] / df["predicted_price"]
 df["perf_z"] = (df["price_perf"] - df["price_perf"].mean()) / df["price_perf"].std()
 
@@ -103,7 +105,6 @@ df.loc[df["perf_z"] <= 0.0, "label"] = 1
 print("\nLABEL DISTRIBUTION:")
 print(df["label"].value_counts(normalize=True))
 
-# 3) CLASSIFICATION
 X = df[reg_features]
 y = df["label"]
 
@@ -139,5 +140,6 @@ print("Confusion Matrix:\n", confusion_matrix(y_test, preds))
 pickle.dump(model, open(f"{MODEL_DIR}/binary_zscore_model.pkl", "wb"))
 pickle.dump(reg_features, open(f"{MODEL_DIR}/binary_zscore_features.pkl", "wb"))
 pickle.dump(reg_model, open(f"{MODEL_DIR}/price_regressor.pkl", "wb"))
+pickle.dump(imputer, open(f"{MODEL_DIR}/imputer.pkl", "wb"))
 
 print("\nModel saved successfully!")
