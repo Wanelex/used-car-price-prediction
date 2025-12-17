@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { CarListing } from '../api/listingsApi';
+import React, { useState, useEffect } from 'react';
+import { CarListing, BuyabilityAnalysis, analyzeListing } from '../api/listingsApi';
 import '../styles/ListingDetail.css';
 
 interface ListingDetailProps {
@@ -10,6 +10,28 @@ interface ListingDetailProps {
 
 export default function ListingDetail({ listing, onClose, onDelete }: ListingDetailProps) {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [analysis, setAnalysis] = useState<BuyabilityAnalysis | null>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(true);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+
+  // Fetch buyability analysis when component mounts
+  useEffect(() => {
+    const fetchAnalysis = async () => {
+      try {
+        setAnalysisLoading(true);
+        setAnalysisError(null);
+        const result = await analyzeListing(listing.user_id, listing.listing_id);
+        setAnalysis(result.analysis);
+      } catch (err: any) {
+        console.error('Failed to fetch analysis:', err);
+        setAnalysisError(err.response?.data?.detail || 'Analysis unavailable');
+      } finally {
+        setAnalysisLoading(false);
+      }
+    };
+
+    fetchAnalysis();
+  }, [listing.listing_id, listing.user_id]);
 
   const handleDelete = async () => {
     if (!window.confirm('Bu ilanı silmek istediğinizden emin misiniz?')) {
@@ -40,6 +62,32 @@ export default function ListingDetail({ listing, onClose, onDelete }: ListingDet
   // Get first 2 images
   const displayImages = listing.images?.slice(0, 2) || [];
 
+  // Get risk level class based on score
+  const getRiskLevelClass = (score: number): string => {
+    if (score >= 71) return 'risk-low';
+    if (score >= 51) return 'risk-moderate';
+    return 'risk-high';
+  };
+
+  // Get risk level text in Turkish
+  const getRiskLevelText = (score: number): string => {
+    if (score >= 86) return 'Minimal Risk - Mukemmel Durum';
+    if (score >= 71) return 'Cok Dusuk Risk - Iyi Durum';
+    if (score >= 51) return 'Dusuk Risk - Kabul Edilebilir';
+    if (score >= 31) return 'Orta Risk - Dikkatli Inceleme Onerilir';
+    return 'Yuksek Risk - Ciddi Endiseler Var';
+  };
+
+  // Translate feature score names to Turkish
+  const featureScoreLabels: Record<string, string> = {
+    age_score: 'Arac Yasi',
+    km_per_year_score: 'Yillik KM',
+    km_score: 'Toplam KM',
+    year_score: 'Model Yili',
+    hp_score: 'Motor Gucu',
+    ccm_score: 'Motor Hacmi'
+  };
+
   return (
     <div className="modal" onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -64,6 +112,82 @@ export default function ListingDetail({ listing, onClose, onDelete }: ListingDet
               </div>
             </div>
           )}
+
+          {/* Buyability Analysis Section */}
+          <div className="modal-section analysis-section">
+            <h3>Alinabilirlik Analizi</h3>
+            {analysisLoading && (
+              <div className="analysis-loading">
+                <div className="loading-spinner-small"></div>
+                <span>Analiz yapiliyor...</span>
+              </div>
+            )}
+            {analysisError && (
+              <div className="analysis-error">
+                <span>Analiz yapilamadi: {analysisError}</span>
+              </div>
+            )}
+            {analysis && !analysisLoading && (
+              <div className="analysis-content">
+                {/* Main Risk Score */}
+                <div className={`risk-score-card ${getRiskLevelClass(analysis.risk_score)}`}>
+                  <div className="risk-score-main">
+                    <span className="risk-score-value">{analysis.risk_score}</span>
+                    <span className="risk-score-max">/100</span>
+                  </div>
+                  <div className="risk-decision">
+                    {analysis.decision === 'BUYABLE' ? 'ALINABILIR' : 'ALINMAMALI'}
+                  </div>
+                  <div className="risk-explanation">{getRiskLevelText(analysis.risk_score)}</div>
+                </div>
+
+                {/* Feature Scores */}
+                <div className="feature-scores">
+                  <h4>Ozellik Puanlari</h4>
+                  <div className="feature-scores-grid">
+                    {Object.entries(analysis.feature_scores).map(([key, value]) => (
+                      <div key={key} className="feature-score-item">
+                        <span className="feature-score-label">{featureScoreLabels[key] || key}</span>
+                        <div className="feature-score-bar">
+                          <div
+                            className="feature-score-fill"
+                            style={{ width: `${value * 100}%` }}
+                          ></div>
+                        </div>
+                        <span className="feature-score-value">{(value * 100).toFixed(0)}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Risk Factors */}
+                {analysis.risk_factors.length > 0 && (
+                  <div className="risk-factors">
+                    <h4>Risk Faktorleri</h4>
+                    <ul className="risk-factors-list">
+                      {analysis.risk_factors.map((factor, idx) => (
+                        <li key={idx} className="risk-factor-item">{factor}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Top Contributing Features */}
+                <div className="top-features">
+                  <h4>En Onemli Ozellikler</h4>
+                  <div className="top-features-list">
+                    {analysis.top_features.map((feat, idx) => (
+                      <div key={idx} className="top-feature-item">
+                        <span className="top-feature-name">{feat.feature}</span>
+                        <span className="top-feature-value">{feat.value.toLocaleString('tr-TR')}</span>
+                        <span className="top-feature-importance">({(feat.importance * 100).toFixed(1)}%)</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Section 1: İlan Bilgileri */}
           <div className="modal-section">

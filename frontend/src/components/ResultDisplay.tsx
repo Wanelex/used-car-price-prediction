@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { CrawlResult } from '../api/crawlerApi';
+import type { BuyabilityAnalysis } from '../api/listingsApi';
 import './ResultDisplay.css';
 
 interface ResultDisplayProps {
   result: CrawlResult;
   onNewCrawl: () => void;
 }
+
+// API base URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // Helper to format price in Turkish Lira
 const formatPrice = (price: string | number | null | undefined): string => {
@@ -29,10 +33,104 @@ const formatMileage = (km: string | number | null | undefined): string => {
 };
 
 export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onNewCrawl }) => {
-  const [activeTab, setActiveTab] = useState<'listing' | 'details' | 'specs' | 'parts' | 'images' | 'html'>('listing');
+  const [activeTab, setActiveTab] = useState<'analysis' | 'listing' | 'details' | 'specs' | 'parts' | 'images' | 'html'>('analysis');
+  const [analysis, setAnalysis] = useState<BuyabilityAnalysis | null>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(true);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   const crawlData = result.result;
   const listing = crawlData?.sahibinden_listing;
+
+  // Fetch buyability analysis when component mounts
+  useEffect(() => {
+    const fetchAnalysis = async () => {
+      if (!listing) {
+        setAnalysisLoading(false);
+        setAnalysisError('No listing data available');
+        return;
+      }
+
+      // Extract year and mileage from listing
+      const year = listing.yil || listing.year;
+      const mileage = listing.km || listing.mileage;
+      const engineVolume = listing.motor_hacmi || listing.engine_volume;
+      const enginePower = listing.motor_gucu || listing.engine_power;
+
+      // Parse mileage if it's a string
+      let parsedMileage = mileage;
+      if (typeof mileage === 'string') {
+        parsedMileage = parseInt(mileage.replace(/[^\d]/g, ''));
+      }
+
+      // Parse year if it's a string
+      let parsedYear = year;
+      if (typeof year === 'string') {
+        parsedYear = parseInt(year);
+      }
+
+      if (!parsedYear || !parsedMileage || isNaN(parsedYear) || isNaN(parsedMileage)) {
+        setAnalysisLoading(false);
+        setAnalysisError('Missing required data (year or mileage)');
+        return;
+      }
+
+      try {
+        setAnalysisLoading(true);
+        setAnalysisError(null);
+
+        const params = new URLSearchParams({
+          year: String(parsedYear),
+          mileage: String(parsedMileage),
+        });
+        if (engineVolume) params.append('engine_volume', String(engineVolume));
+        if (enginePower) params.append('engine_power', String(enginePower));
+
+        const response = await fetch(`${API_BASE_URL}/api/v1/analyze?${params}`, {
+          method: 'POST',
+        });
+
+        if (!response.ok) {
+          throw new Error('Analysis request failed');
+        }
+
+        const data = await response.json();
+        setAnalysis(data.analysis);
+      } catch (err: any) {
+        console.error('Failed to fetch analysis:', err);
+        setAnalysisError(err.message || 'Analysis unavailable');
+      } finally {
+        setAnalysisLoading(false);
+      }
+    };
+
+    fetchAnalysis();
+  }, [listing]);
+
+  // Get risk level class based on score
+  const getRiskLevelClass = (score: number): string => {
+    if (score >= 71) return 'risk-low';
+    if (score >= 51) return 'risk-moderate';
+    return 'risk-high';
+  };
+
+  // Get risk level text in Turkish
+  const getRiskLevelText = (score: number): string => {
+    if (score >= 86) return 'Minimal Risk - Mukemmel Durum';
+    if (score >= 71) return 'Cok Dusuk Risk - Iyi Durum';
+    if (score >= 51) return 'Dusuk Risk - Kabul Edilebilir';
+    if (score >= 31) return 'Orta Risk - Dikkatli Inceleme Onerilir';
+    return 'Yuksek Risk - Ciddi Endiseler Var';
+  };
+
+  // Translate feature score names to Turkish
+  const featureScoreLabels: Record<string, string> = {
+    age_score: 'Arac Yasi',
+    km_per_year_score: 'Yillik KM',
+    km_score: 'Toplam KM',
+    year_score: 'Model Yili',
+    hp_score: 'Motor Gucu',
+    ccm_score: 'Motor Hacmi'
+  };
 
   // Build title from brand, series, model
   const listingTitle = listing
@@ -57,6 +155,12 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onNewCrawl
       {listing ? (
         <>
           <div className="tabs">
+            <button
+              className={`tab ${activeTab === 'analysis' ? 'active' : ''}`}
+              onClick={() => setActiveTab('analysis')}
+            >
+              Alinabilirlik Analizi
+            </button>
             <button
               className={`tab ${activeTab === 'listing' ? 'active' : ''}`}
               onClick={() => setActiveTab('listing')}
@@ -96,6 +200,83 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onNewCrawl
           </div>
 
           <div className="tab-content">
+            {/* Alinabilirlik Analizi Tab */}
+            {activeTab === 'analysis' && (
+              <div className="analysis-section">
+                {analysisLoading && (
+                  <div className="analysis-loading">
+                    <div className="loading-spinner-small"></div>
+                    <span>Analiz yapiliyor...</span>
+                  </div>
+                )}
+                {analysisError && (
+                  <div className="analysis-error">
+                    <span>Analiz yapilamadi: {analysisError}</span>
+                  </div>
+                )}
+                {analysis && !analysisLoading && (
+                  <div className="analysis-content">
+                    {/* Main Risk Score */}
+                    <div className={`risk-score-card ${getRiskLevelClass(analysis.risk_score)}`}>
+                      <div className="risk-score-main">
+                        <span className="risk-score-value">{analysis.risk_score}</span>
+                        <span className="risk-score-max">/100</span>
+                      </div>
+                      <div className="risk-decision">
+                        {analysis.decision === 'BUYABLE' ? 'ALINABILIR' : 'ALINMAMALI'}
+                      </div>
+                      <div className="risk-explanation">{getRiskLevelText(analysis.risk_score)}</div>
+                    </div>
+
+                    {/* Feature Scores */}
+                    <div className="feature-scores">
+                      <h4>Ozellik Puanlari</h4>
+                      <div className="feature-scores-grid">
+                        {Object.entries(analysis.feature_scores).map(([key, value]) => (
+                          <div key={key} className="feature-score-item">
+                            <span className="feature-score-label">{featureScoreLabels[key] || key}</span>
+                            <div className="feature-score-bar">
+                              <div
+                                className="feature-score-fill"
+                                style={{ width: `${value * 100}%` }}
+                              ></div>
+                            </div>
+                            <span className="feature-score-value">{(value * 100).toFixed(0)}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Risk Factors */}
+                    {analysis.risk_factors.length > 0 && (
+                      <div className="risk-factors">
+                        <h4>Risk Faktorleri</h4>
+                        <ul className="risk-factors-list">
+                          {analysis.risk_factors.map((factor, idx) => (
+                            <li key={idx} className="risk-factor-item">{factor}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Top Contributing Features */}
+                    <div className="top-features">
+                      <h4>En Onemli Ozellikler</h4>
+                      <div className="top-features-list">
+                        {analysis.top_features.map((feat, idx) => (
+                          <div key={idx} className="top-feature-item">
+                            <span className="top-feature-name">{feat.feature}</span>
+                            <span className="top-feature-value">{feat.value.toLocaleString('tr-TR')}</span>
+                            <span className="top-feature-importance">({(feat.importance * 100).toFixed(1)}%)</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* İlan Bilgileri Tab */}
             {activeTab === 'listing' && (
               <div className="listing-section">

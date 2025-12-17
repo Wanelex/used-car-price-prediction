@@ -62,6 +62,32 @@ export type SearchFilters = {
   limit?: number;
 };
 
+export type FeatureScore = {
+  age_score: number;
+  km_per_year_score: number;
+  km_score: number;
+  year_score: number;
+  hp_score: number;
+  ccm_score: number;
+};
+
+export type TopFeature = {
+  feature: string;
+  value: number;
+  importance: number;
+};
+
+export type BuyabilityAnalysis = {
+  risk_score: number;
+  decision: 'BUYABLE' | 'NOT BUYABLE';
+  probability: number;
+  health_score: number;
+  risk_factors: string[];
+  feature_scores: FeatureScore;
+  top_features: TopFeature[];
+  explanation: string;
+};
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const api = axios.create({
@@ -101,6 +127,17 @@ export const searchListings = async (userId: string, filters: SearchFilters) => 
   const response = await api.get('/api/v1/listings/search', {
     headers: { 'user-id': userId },
     params: filters,
+  });
+  return response.data;
+};
+
+export const analyzeListing = async (userId: string, listingId: string): Promise<{
+  status: string;
+  listing_id: string;
+  analysis: BuyabilityAnalysis;
+}> => {
+  const response = await api.post(`/api/v1/listings/${listingId}/analyze`, null, {
+    headers: { 'user-id': userId },
   });
   return response.data;
 };

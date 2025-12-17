@@ -13,6 +13,14 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 from config.settings import settings
 from loguru import logger
 
+# Import buyability prediction function
+try:
+    from src.predict_buyability import predict_buyability
+    BUYABILITY_MODEL_AVAILABLE = True
+except Exception as e:
+    logger.warning(f"Buyability model not available: {e}")
+    BUYABILITY_MODEL_AVAILABLE = False
+
 router = APIRouter()
 
 # Fields to return to frontend (cleaned data only)
@@ -282,4 +290,117 @@ async def search_listings(
         }
     except Exception as e:
         logger.error(f"Error searching listings for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/listings/{listing_id}/analyze", tags=["Listings"])
+async def analyze_listing(
+    listing_id: str,
+    user_id: str = Header(..., description="User ID from Firebase")
+):
+    """
+    Analyze a car listing for buyability based on vehicle features.
+
+    Returns a risk score (0-100) where higher = safer to buy.
+    Analysis is based on 6 numerical features: year, mileage, engine volume,
+    engine power, vehicle age, and yearly mileage.
+
+    - **listing_id**: The listing ID to analyze
+    - **user_id**: Firebase user ID (from Authorization header)
+    """
+    if not BUYABILITY_MODEL_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="Buyability model not available. Please train the model first."
+        )
+
+    try:
+        repo = get_firebase_repo()
+        listing = repo.get_by_listing_id(listing_id)
+
+        if not listing:
+            raise HTTPException(status_code=404, detail="Listing not found")
+
+        # Verify user owns this listing
+        if listing.get('user_id') != user_id:
+            raise HTTPException(status_code=403, detail="Unauthorized")
+
+        # Extract features for prediction
+        sample = {
+            "Model Yıl": listing.get('year'),
+            "Km": listing.get('mileage'),
+            "CCM": listing.get('engine_volume'),
+            "Beygir Gucu": listing.get('engine_power')
+        }
+
+        # Validate required fields
+        if sample["Model Yıl"] is None or sample["Km"] is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Listing missing required fields (year, mileage) for analysis"
+            )
+
+        # Get buyability prediction
+        analysis = predict_buyability(sample)
+
+        return {
+            "status": "success",
+            "listing_id": listing_id,
+            "analysis": analysis
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error analyzing listing {listing_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/analyze", tags=["Listings"])
+async def analyze_car_direct(
+    year: int = Query(..., description="Model year"),
+    mileage: int = Query(..., description="Total mileage in km"),
+    engine_volume: Optional[str] = Query(None, description="Engine volume (e.g., '1600' or '1301-1600')"),
+    engine_power: Optional[str] = Query(None, description="Engine power (e.g., '120' or '101-125')")
+):
+    """
+    Analyze a car directly without saving to database.
+
+    This endpoint allows quick analysis of any car by providing the features directly.
+    No authentication required.
+
+    - **year**: Model year (e.g., 2015)
+    - **mileage**: Total mileage in km (e.g., 120000)
+    - **engine_volume**: Engine volume in cc (optional)
+    - **engine_power**: Engine power in HP (optional)
+    """
+    if not BUYABILITY_MODEL_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="Buyability model not available. Please train the model first."
+        )
+
+    try:
+        # Build sample dict
+        sample = {
+            "Model Yıl": year,
+            "Km": mileage,
+            "CCM": engine_volume if engine_volume else "1500",
+            "Beygir Gucu": engine_power if engine_power else "100"
+        }
+
+        # Get buyability prediction
+        analysis = predict_buyability(sample)
+
+        return {
+            "status": "success",
+            "input": {
+                "year": year,
+                "mileage": mileage,
+                "engine_volume": engine_volume,
+                "engine_power": engine_power
+            },
+            "analysis": analysis
+        }
+    except Exception as e:
+        logger.error(f"Error analyzing car: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
