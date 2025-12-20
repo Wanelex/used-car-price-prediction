@@ -8,11 +8,6 @@ interface CrawlFormProps {
 
 export const CrawlForm: React.FC<CrawlFormProps> = ({ onSubmit, isLoading = false }) => {
   const [url, setUrl] = useState('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [useStealth, setUseStealth] = useState(true);
-  const [solveCaptcha, setSolveCaptcha] = useState(true);
-  const [maxRetries, setMaxRetries] = useState(3);
-  const [waitTime, setWaitTime] = useState(0);
   const [error, setError] = useState('');
 
   const validateUrl = (urlString: string): boolean => {
@@ -40,10 +35,10 @@ export const CrawlForm: React.FC<CrawlFormProps> = ({ onSubmit, isLoading = fals
 
     const request: CrawlRequest = {
       url: url.trim(),
-      use_stealth: useStealth,
-      solve_captcha: solveCaptcha,
-      max_retries: maxRetries,
-      wait_time: waitTime,
+      use_stealth: true,
+      solve_captcha: true,
+      max_retries: 3,
+      wait_time: 0,
       extract_images: true,
       extract_links: true,
     };
@@ -70,69 +65,6 @@ export const CrawlForm: React.FC<CrawlFormProps> = ({ onSubmit, isLoading = fals
           />
           {error && <div className="error-message">{error}</div>}
         </div>
-
-        <button
-          type="button"
-          className="toggle-advanced"
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          disabled={isLoading}
-        >
-          {showAdvanced ? '▼ Hide Advanced Settings' : '▶ Show Advanced Settings'}
-        </button>
-
-        {showAdvanced && (
-          <div className="advanced-settings">
-            <div className="form-group checkbox">
-              <input
-                id="stealth"
-                type="checkbox"
-                checked={useStealth}
-                onChange={(e) => setUseStealth(e.target.checked)}
-                disabled={isLoading}
-              />
-              <label htmlFor="stealth">Stealth Mode</label>
-              <span className="help-text">Avoid detection by websites</span>
-            </div>
-
-            <div className="form-group checkbox">
-              <input
-                id="captcha"
-                type="checkbox"
-                checked={solveCaptcha}
-                onChange={(e) => setSolveCaptcha(e.target.checked)}
-                disabled={isLoading}
-              />
-              <label htmlFor="captcha">Solve CAPTCHA</label>
-              <span className="help-text">Auto-solve CAPTCHA challenges</span>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="retries">Max Retries: {maxRetries}</label>
-              <input
-                id="retries"
-                type="range"
-                min="0"
-                max="10"
-                value={maxRetries}
-                onChange={(e) => setMaxRetries(parseInt(e.target.value))}
-                disabled={isLoading}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="waitTime">Wait Time after Load: {waitTime}s</label>
-              <input
-                id="waitTime"
-                type="range"
-                min="0"
-                max="30"
-                value={waitTime}
-                onChange={(e) => setWaitTime(parseInt(e.target.value))}
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-        )}
 
         <button type="submit" disabled={isLoading} className="submit-button">
           {isLoading ? 'Crawling...' : 'Start Crawl'}
