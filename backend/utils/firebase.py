@@ -4,10 +4,11 @@ import os
 
 def init_firebase():
     if not firebase_admin._apps:
+        # Look for serviceAccountKey.json in project root directory
         cred_path = os.path.join(
             os.path.dirname(__file__),
             "..",
-            "config",
+            "..",
             "serviceAccountKey.json"
         )
 

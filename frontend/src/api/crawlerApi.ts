@@ -55,16 +55,38 @@ export interface Job {
   error_message?: string | null;
   retry_count: number;
   progress: number;
+  message?: string;
+}
+
+/**
+ * Crawl Request (frontend form data)
+ */
+export interface CrawlRequest {
+  url: string;
+  use_stealth?: boolean;
+  solve_captcha?: boolean;
+  max_retries?: number;
+  wait_time?: number;
+  extract_images?: boolean;
+  extract_links?: boolean;
+}
+
+/**
+ * Crawl Result
+ */
+export interface CrawlResult {
+  job_id: string;
+  url: string;
+  status: JobStatus;
+  data?: any;
 }
 
 /**
  *  START CRAWL
- * POST /api/v1/jobs
+ * POST /api/v1/crawl
  */
-export async function startCrawl(url: string): Promise<Job> {
-  const response = await api.post("/jobs", {
-    url,
-  });
+export async function startCrawl(request: CrawlRequest): Promise<Job> {
+  const response = await api.post("/crawl", request);
 
   return response.data;
 }
@@ -120,12 +142,22 @@ export async function listJobs(): Promise<Job[]> {
 }
 
 /**
+ * GET CRAWL RESULT
+ * GET /api/v1/crawl/{job_id}/result
+ */
+export async function getCrawlResult(jobId: string): Promise<CrawlResult> {
+  const response = await api.get(`/crawl/${jobId}/result`);
+  return response.data;
+}
+
+/**
  * Export as object (opsiyonel kullanım)
  */
 export const crawlerApi = {
   startCrawl,
   getJob,
   getJobStatus,
+  getCrawlResult,
   listJobs,
   deleteJob,
   deleteAllJobs,

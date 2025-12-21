@@ -1,9 +1,10 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import './App.css';
 
 import { useCrawler } from './hooks/useCrawler';
 import type { CrawlRequest } from './api/crawlerApi';
+import { logoutUser } from '../services/authService';
 
 import CrawlForm from './components/CrawlForm';
 import LoadingState from './components/LoadingState';
@@ -13,8 +14,25 @@ import ErrorDisplay from './components/ErrorDisplay';
 // LOGIN PAGE
 import Login from './pages/Login';
 
+// Protected Route Component
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    setIsAuthenticated(!!token);
+  }, []);
+
+  if (isAuthenticated === null) {
+    return <div>Loading...</div>;
+  }
+
+  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+}
+
 function CrawlerPage() {
   const crawler = useCrawler();
+  const navigate = useNavigate();
 
   const handleStartCrawl = async (request: CrawlRequest) => {
     await crawler.startCrawl(request);
@@ -22,6 +40,11 @@ function CrawlerPage() {
 
   const handleReset = () => {
     crawler.reset();
+  };
+
+  const handleLogout = async () => {
+    await logoutUser();
+    navigate('/login');
   };
 
   return (
@@ -34,6 +57,22 @@ function CrawlerPage() {
             <p>See Beyond the Listing</p>
           </div>
         </div>
+        <button className="logout-button" onClick={handleLogout} title="Logout">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+        </button>
       </header>
 
       <main className="app-main">
@@ -69,7 +108,15 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/" element={<CrawlerPage />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <CrawlerPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
   );

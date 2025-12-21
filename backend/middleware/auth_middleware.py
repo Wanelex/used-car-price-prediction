@@ -21,6 +21,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         # DEV MODE (AUTH BYPASS)
         # ----------------------------
         if settings.DEV_MODE:
+            request.state.user = {"uid": "dev_user"}
             request.state.user_id = "dev_user"
             return await call_next(request)
 

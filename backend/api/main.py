@@ -30,10 +30,10 @@ from fastapi.openapi.utils import get_openapi
 # -------------------------------------------------
 # PROJECT IMPORTS
 # -------------------------------------------------
-#from middleware.auth_middleware import AuthMiddleware
+from middleware.auth_middleware import AuthMiddleware
 from config.settings import settings
 from api.models.schemas import HealthCheck
-from api.routes import jobs, listings
+from api.routes import crawl, jobs, listings
 
 # -------------------------------------------------
 # WEBSOCKET MANAGER
@@ -97,11 +97,12 @@ app.add_middleware(
 # -------------------------------------------------
 #  AUTH
 # -------------------------------------------------
-#app.add_middleware(AuthMiddleware)
+app.add_middleware(AuthMiddleware)
 
 # -------------------------------------------------
 # ROUTERS
 # -------------------------------------------------
+app.include_router(crawl.router, prefix="/api/v1", tags=["Crawling"])
 app.include_router(jobs.router, prefix="/api/v1", tags=["Jobs"])
 app.include_router(listings.router, prefix="/api/v1", tags=["Listings"])
 
