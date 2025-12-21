@@ -1,143 +1,60 @@
-import axios from 'axios';
+import axios from "axios";
+import { getAuth } from "firebase/auth";
 
-export type CarListing = {
-  id: string;
-  listing_id: string;
-  // Basic Info
-  brand: string;
-  series?: string;
-  model: string;
-  year: number;
-  price: number;
-  mileage: number;
-  listing_date?: string;
-  title?: string;
-  description?: string;
-  // Technical Details
-  fuel_type?: string;
-  transmission?: string;
-  body_type?: string;
-  color?: string;
-  engine_power?: string;
-  engine_volume?: string;
-  drive_type?: string;
-  // Condition & Status
-  vehicle_condition?: string;
-  heavy_damage?: boolean;
-  warranty?: string;
-  plate_origin?: string;
-  trade_option?: boolean;
-  // Seller Info
-  seller_type?: string;
-  location?: string;
-  phone?: string;
-  // Quality & Validation
-  data_quality_score: number;
-  is_valid?: boolean;
-  // Complex Data
-  images?: Array<{
-    type: string;
-    path: string;
-    downloaded_at?: string;
-  }>;
-  features?: Record<string, string[]>;
-  technical_specs?: Record<string, string>;
-  painted_parts?: {
-    boyali?: string[];
-    degisen?: string[];
-    gorseller?: string[];
-  };
-  // Metadata
-  crawled_at: string;
-  updated_at: string;
-  user_id: string;
-};
-
-export type SearchFilters = {
-  brand?: string;
-  min_year?: number;
-  max_year?: number;
-  min_price?: number;
-  max_price?: number;
-  limit?: number;
-};
-
-export type FeatureScore = {
-  age_score: number;
-  km_per_year_score: number;
-  km_score: number;
-  year_score: number;
-  hp_score: number;
-  ccm_score: number;
-};
-
-export type TopFeature = {
-  feature: string;
-  value: number;
-  importance: number;
-};
-
-export type BuyabilityAnalysis = {
-  risk_score: number;
-  decision: 'BUYABLE' | 'NOT BUYABLE';
-  probability: number;
-  health_score: number;
-  risk_factors: string[];
-  feature_scores: FeatureScore;
-  top_features: TopFeature[];
-  explanation: string;
-};
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api/v1";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
-export const getListings = async (userId: string, limit: number = 50, skip: number = 0) => {
-  const response = await api.get('/api/v1/listings', {
-    headers: { 'user-id': userId },
+api.interceptors.request.use(async (config) => {
+  const auth = getAuth();
+  const user = auth.currentUser;
+
+  if (user) {
+    const token = await user.getIdToken(true);
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
+export const getListings = async (limit: number = 50, skip: number = 0) => {
+  const response = await api.get("/listings", {
     params: { limit, skip },
   });
   return response.data;
 };
 
-export const getListingById = async (userId: string, listingId: string) => {
-  const response = await api.get(`/api/v1/listings/${listingId}`, {
-    headers: { 'user-id': userId },
-  });
+export const getListingById = async (listingId: string) => {
+  const response = await api.get(`/listings/${listingId}`);
   return response.data;
 };
 
-export const deleteListing = async (userId: string, listingId: string) => {
-  const response = await api.delete(`/api/v1/listings/${listingId}`, {
-    headers: { 'user-id': userId },
-  });
+export const deleteListing = async (listingId: string) => {
+  const response = await api.delete(`/listings/${listingId}`);
   return response.data;
 };
 
-export const getStats = async (userId: string) => {
-  const response = await api.get('/api/v1/listings/stats/summary', {
-    headers: { 'user-id': userId },
-  });
+export const getStats = async () => {
+  const response = await api.get("/listings/stats/summary");
   return response.data;
 };
 
-export const searchListings = async (userId: string, filters: SearchFilters) => {
-  const response = await api.get('/api/v1/listings/search', {
-    headers: { 'user-id': userId },
+export const searchListings = async (filters: Record<string, any>) => {
+  const response = await api.get("/listings/search", {
     params: filters,
   });
   return response.data;
 };
 
-export const analyzeListing = async (userId: string, listingId: string): Promise<{
-  status: string;
-  listing_id: string;
-  analysis: BuyabilityAnalysis;
-}> => {
-  const response = await api.post(`/api/v1/listings/${listingId}/analyze`, null, {
-    headers: { 'user-id': userId },
-  });
+export const analyzeListing = async (listingId: string) => {
+  const response = await api.post(`/listings/${listingId}/analyze`);
+  return response.data;
+};
+
+export const getJobs = async () => {
+  const response = await api.get("/jobs");
   return response.data;
 };

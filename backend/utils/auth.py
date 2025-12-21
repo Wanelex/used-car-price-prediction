@@ -1,10 +1,13 @@
 """Firebase Authentication utilities"""
 
+
 from typing import Optional, Dict, Any
 import firebase_admin
 from firebase_admin import auth as firebase_auth
 from loguru import logger
 
+from utils.firebase import init_firebase
+init_firebase()
 
 class FirebaseAuthManager:
     """Manage Firebase authentication"""

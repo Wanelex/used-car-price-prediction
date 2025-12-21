@@ -1,13 +1,19 @@
 import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './App.css';
+
 import { useCrawler } from './hooks/useCrawler';
 import type { CrawlRequest } from './api/crawlerApi';
+
 import CrawlForm from './components/CrawlForm';
 import LoadingState from './components/LoadingState';
 import ResultDisplay from './components/ResultDisplay';
 import ErrorDisplay from './components/ErrorDisplay';
 
-function App() {
+// LOGIN PAGE
+import Login from './pages/Login';
+
+function CrawlerPage() {
   const crawler = useCrawler();
 
   const handleStartCrawl = async (request: CrawlRequest) => {
@@ -31,10 +37,8 @@ function App() {
       </header>
 
       <main className="app-main">
-        {/* Idle State - Show Form */}
         {crawler.state === 'idle' && <CrawlForm onSubmit={handleStartCrawl} />}
 
-        {/* Loading State */}
         {crawler.state === 'loading' && crawler.jobId && (
           <LoadingState
             url={crawler.result?.url || 'Processing...'}
@@ -44,12 +48,10 @@ function App() {
           />
         )}
 
-        {/* Success State */}
         {crawler.state === 'completed' && crawler.result && (
           <ResultDisplay result={crawler.result} onNewCrawl={handleReset} />
         )}
 
-        {/* Error State */}
         {crawler.state === 'failed' && crawler.error && (
           <ErrorDisplay error={crawler.error} onRetry={handleReset} />
         )}
@@ -59,6 +61,17 @@ function App() {
         <p>Built with React + FastAPI</p>
       </footer>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<CrawlerPage />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

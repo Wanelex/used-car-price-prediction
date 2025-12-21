@@ -1,104 +1,134 @@
-import axios from 'axios';
+import axios from "axios";
+import { getAuth } from "firebase/auth";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+/**
+ * Backend base url
+ * FastAPI: http://127.0.0.1:8000
+ * Prefix:  /api/v1
+ */
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ??
+  "http://127.0.0.1:8000/api/v1";
 
+/**
+ * Axios instance
+ */
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
-export type JobStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+/**
+ *  Firebase Auth interceptor
+ */
+api.interceptors.request.use(async (config) => {
+  const auth = getAuth();
+  const user = auth.currentUser;
 
-export interface CrawlRequest {
-  url: string;
-  use_stealth?: boolean;
-  use_proxy?: boolean;
-  solve_captcha?: boolean;
-  timeout?: number;
-  max_retries?: number;
-  wait_time?: number;
-  wait_for_selector?: string;
-  extract_images?: boolean;
-  extract_links?: boolean;
-  custom_headers?: Record<string, string>;
-}
+  if (user) {
+    const token = await user.getIdToken(true);
+    config.headers.Authorization = `Bearer ${token}`;
+  }
 
-export interface CrawlResponse {
+  return config;
+});
+
+/**
+ * Job status types (backend ile birebir)
+ */
+export type JobStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+/**
+ * Backend Job modeli (JobInfo)
+ */
+export interface Job {
   job_id: string;
+  url: string;
   status: JobStatus;
-  message: string;
-  estimated_time?: number;
+  created_at: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+  error_message?: string | null;
+  retry_count: number;
+  progress: number;
 }
 
-export interface JobStatusResponse {
+/**
+ *  START CRAWL
+ * POST /api/v1/jobs
+ */
+export async function startCrawl(url: string): Promise<Job> {
+  const response = await api.post("/jobs", {
+    url,
+  });
+
+  return response.data;
+}
+
+/**
+ * GET JOB (detail)
+ * GET /api/v1/jobs/{job_id}
+ */
+export async function getJob(jobId: string): Promise<Job> {
+  const response = await api.get(`/jobs/${jobId}`);
+  return response.data;
+}
+
+/**
+ *  GET JOB STATUS
+ * GET /api/v1/jobs/{job_id}/status
+ */
+export async function getJobStatus(jobId: string): Promise<{
   job_id: string;
   status: JobStatus;
   progress: number;
   message: string;
-}
-
-export interface PageMetadata {
-  title?: string;
-  description?: string;
-  keywords?: string[];
-  author?: string;
-  og_title?: string;
-  og_description?: string;
-  og_image?: string;
-  canonical_url?: string;
-  language?: string;
-  charset?: string;
-}
-
-export interface CrawlResult {
-  job_id: string;
-  url: string;
-  status: JobStatus;
-  timestamp: string;
-  result?: {
-    html?: string;
-    text?: string;
-    title?: string;
-    metadata?: PageMetadata;
-    images?: string[];
-    links?: string[];
-    final_url?: string;
-    response_time?: number;
-    captcha_solved?: boolean;
-    method?: string;
-    crawl_duration?: number;
-  };
-  crawl_duration?: number;
-  error_message?: string;
-}
-
-async function startCrawl(request: CrawlRequest): Promise<CrawlResponse> {
-  const response = await api.post('/api/v1/crawl', request);
+}> {
+  const response = await api.get(`/jobs/${jobId}/status`);
   return response.data;
 }
 
-async function getJobStatus(jobId: string): Promise<JobStatusResponse> {
-  const response = await api.get(`/api/v1/jobs/${jobId}/status`);
+/**
+ *  DELETE JOB
+ * DELETE /api/v1/jobs/{job_id}
+ */
+export async function deleteJob(jobId: string) {
+  const response = await api.delete(`/jobs/${jobId}`);
   return response.data;
 }
 
-async function getCrawlResult(jobId: string): Promise<CrawlResult> {
-  const response = await api.get(`/api/v1/crawl/${jobId}/result`);
+/**
+ *  DELETE ALL JOBS
+ * DELETE /api/v1/jobs
+ */
+export async function deleteAllJobs() {
+  const response = await api.delete("/jobs");
   return response.data;
 }
 
-async function healthCheck() {
-  const response = await api.get('/health');
+/**
+ *  LIST JOBS
+ * GET /api/v1/jobs
+ */
+export async function listJobs(): Promise<Job[]> {
+  const response = await api.get("/jobs");
   return response.data;
 }
 
+/**
+ * Export as object (opsiyonel kullanım)
+ */
 export const crawlerApi = {
   startCrawl,
+  getJob,
   getJobStatus,
-  getCrawlResult,
-  healthCheck,
+  listJobs,
+  deleteJob,
+  deleteAllJobs,
 };
 
 export default crawlerApi;
