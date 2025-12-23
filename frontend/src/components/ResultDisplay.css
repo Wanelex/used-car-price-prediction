@@ -253,6 +253,17 @@
   color: var(--text-secondary);
 }
 
+.no-parts-message {
+  padding: 20px;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  border-radius: var(--radius-lg);
+  color: var(--success);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+}
+
 /* Images Grid */
 .images-grid {
   display: grid;
@@ -591,4 +602,706 @@ h3 {
 .top-feature-importance {
   font-size: 12px;
   color: var(--text-muted);
+}
+
+/* ===== HYBRID ANALYSIS LAYOUT ===== */
+
+.hybrid-analysis-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+  margin-top: 16px;
+}
+
+@media (max-width: 1200px) {
+  .hybrid-analysis-container {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .hybrid-analysis-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+.analysis-column {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-xl);
+  padding: 20px;
+  backdrop-filter: blur(10px);
+}
+
+.statistical-column {
+  border-left: 3px solid #3b82f6; /* Blue accent */
+}
+
+.llm-column {
+  border-left: 3px solid #8b5cf6; /* Purple accent */
+}
+
+.analysis-column-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 16px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Adjust existing styles within columns */
+.analysis-column .risk-score-card {
+  margin-bottom: 20px;
+}
+
+.analysis-column .feature-scores,
+.analysis-column .risk-factors,
+.analysis-column .top-features {
+  margin-top: 20px;
+}
+
+/* ===== LLM-SPECIFIC STYLES ===== */
+
+.llm-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-glass);
+}
+
+.llm-section h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 12px 0;
+}
+
+.llm-section h5 {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 12px 0 6px 0;
+}
+
+.llm-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.llm-info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-glass);
+}
+
+.llm-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.llm-value {
+  font-size: 12px;
+  color: var(--text-primary);
+  font-weight: 600;
+  text-align: right;
+  max-width: 60%;
+}
+
+.llm-analysis-block {
+  margin-bottom: 16px;
+}
+
+.llm-analysis-block:last-child {
+  margin-bottom: 0;
+}
+
+.llm-analysis-block p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.llm-recommendation {
+  background: var(--bg-tertiary);
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border-top: none;
+  margin-top: 20px;
+}
+
+.llm-verdict {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  margin: 0 0 12px 0;
+  font-weight: 500;
+}
+
+.llm-score-reasoning {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-glass);
+}
+
+/* LLM Unavailable State */
+.llm-unavailable {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--border-glass);
+  min-height: 300px;
+}
+
+.llm-unavailable-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.llm-unavailable h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+}
+
+.llm-unavailable p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 8px 0;
+  max-width: 280px;
+}
+
+.llm-unavailable-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ===== CRASH SCORE COLUMN STYLES ===== */
+
+.crash-column {
+  border-left: 3px solid #f97316; /* Orange accent */
+}
+
+.crash-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-glass);
+}
+
+.crash-section h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 12px 0;
+}
+
+.crash-summary {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.crash-verdict-section {
+  background: var(--bg-tertiary);
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border-top: none;
+  margin-top: 20px;
+}
+
+.crash-verdict {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Deductions List */
+.crash-deductions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.crash-deduction-item {
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  border: 1px solid var(--border-glass);
+}
+
+.crash-deduction-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.crash-part-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.crash-condition-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.crash-condition-tag.condition-changed {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.crash-condition-tag.condition-painted {
+  background: rgba(251, 191, 36, 0.15);
+  color: var(--warning);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.crash-condition-tag.condition-local-painted {
+  background: rgba(249, 115, 22, 0.15);
+  color: #f97316;
+  border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+.crash-deduction-points {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--danger);
+}
+
+.crash-deduction-advice {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Pristine Car State */
+.crash-pristine {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 20px;
+  text-align: center;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  border-radius: var(--radius-lg);
+  margin-top: 20px;
+}
+
+.crash-pristine-icon {
+  font-size: 36px;
+  color: var(--success);
+  margin-bottom: 12px;
+}
+
+.crash-pristine h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--success);
+  margin: 0 0 8px 0;
+}
+
+.crash-pristine p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 240px;
+}
+
+/* Crash Unavailable State */
+.crash-unavailable {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--border-glass);
+  min-height: 200px;
+}
+
+.crash-unavailable-icon {
+  font-size: 36px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.crash-unavailable h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+}
+
+.crash-unavailable p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 200px;
+}
+
+/* ===== BUYABILITY SCORE SECTION ===== */
+
+.buyability-score-section {
+  grid-column: 1 / -1; /* Span all columns */
+  background: var(--bg-glass);
+  border: 2px solid var(--border-glass);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  margin-bottom: 8px;
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Tier-based border colors */
+.buyability-score-section.tier-guvenli {
+  border-color: rgba(74, 222, 128, 0.5);
+  background: linear-gradient(135deg, rgba(74, 222, 128, 0.08) 0%, var(--bg-glass) 100%);
+}
+
+.buyability-score-section.tier-normal {
+  border-color: rgba(59, 130, 246, 0.5);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, var(--bg-glass) 100%);
+}
+
+.buyability-score-section.tier-dikkat {
+  border-color: rgba(251, 191, 36, 0.5);
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, var(--bg-glass) 100%);
+}
+
+.buyability-score-section.tier-riskli {
+  border-color: rgba(249, 115, 22, 0.5);
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.08) 0%, var(--bg-glass) 100%);
+}
+
+.buyability-score-section.tier-kacin {
+  border-color: rgba(239, 68, 68, 0.5);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, var(--bg-glass) 100%);
+}
+
+.buyability-score-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.buyability-score-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  padding: 0;
+  border: none;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.buyability-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-full);
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.buyability-warning .warning-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: var(--danger);
+  color: white;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.buyability-score-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  padding: 20px 0;
+}
+
+.buyability-score-circle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  border: 4px solid var(--border-glass);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.buyability-score-circle.score-high {
+  border-color: var(--success);
+  box-shadow: 0 8px 32px rgba(74, 222, 128, 0.3);
+}
+
+.buyability-score-circle.score-medium {
+  border-color: var(--warning);
+  box-shadow: 0 8px 32px rgba(251, 191, 36, 0.3);
+}
+
+.buyability-score-circle.score-low {
+  border-color: var(--danger);
+  box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3);
+}
+
+.buyability-score-circle .buyability-score-value {
+  font-size: 48px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.buyability-score-circle .buyability-score-max {
+  font-size: 16px;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.buyability-tier-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.buyability-tier-badge {
+  padding: 8px 20px;
+  border-radius: var(--radius-full);
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.buyability-tier-badge.tier-guvenli {
+  background: rgba(74, 222, 128, 0.2);
+  color: var(--success);
+  border: 2px solid var(--success);
+}
+
+.buyability-tier-badge.tier-normal {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+  border: 2px solid #3b82f6;
+}
+
+.buyability-tier-badge.tier-dikkat {
+  background: rgba(251, 191, 36, 0.2);
+  color: var(--warning);
+  border: 2px solid var(--warning);
+}
+
+.buyability-tier-badge.tier-riskli {
+  background: rgba(249, 115, 22, 0.2);
+  color: #f97316;
+  border: 2px solid #f97316;
+}
+
+.buyability-tier-badge.tier-kacin {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--danger);
+  border: 2px solid var(--danger);
+}
+
+.buyability-tier-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 200px;
+}
+
+/* Component Scores */
+.buyability-component-scores {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-glass);
+}
+
+.component-score-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+}
+
+.component-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.component-bar-container {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.component-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--text-tertiary), var(--text-primary));
+  border-radius: var(--radius-full);
+  transition: width 0.5s ease;
+}
+
+.component-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Calculation Details */
+.buyability-calculation-details {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-glass);
+}
+
+.buyability-calculation-details summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  padding: 8px 0;
+  transition: color 0.2s;
+}
+
+.buyability-calculation-details summary:hover {
+  color: var(--text-primary);
+}
+
+.calculation-breakdown {
+  margin-top: 12px;
+  padding: 16px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-glass);
+}
+
+.calculation-breakdown p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 8px 0;
+  line-height: 1.5;
+}
+
+.calculation-breakdown p:last-child {
+  margin-bottom: 0;
+}
+
+.calculation-breakdown p strong {
+  color: var(--text-primary);
+}
+
+.calculation-formula {
+  font-family: monospace;
+  font-size: 11px !important;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  margin-top: 12px !important;
+  color: var(--text-muted) !important;
+  word-break: break-all;
+}
+
+/* Responsive adjustments for buyability score */
+@media (max-width: 768px) {
+  .buyability-score-main {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .buyability-tier-info {
+    align-items: center;
+    text-align: center;
+  }
+
+  .buyability-component-scores {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .component-score-item {
+    flex-direction: row;
+    justify-content: space-between;
+    min-width: 100%;
+  }
+
+  .component-bar-container {
+    flex: 1;
+    margin: 0 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .buyability-score-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .buyability-score-circle {
+    width: 120px;
+    height: 120px;
+  }
+
+  .buyability-score-circle .buyability-score-value {
+    font-size: 40px;
+  }
 }

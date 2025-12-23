@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { CrawlResult } from '../api/crawlerApi';
-import type { BuyabilityAnalysis } from '../api/listingsApi';
+import type { HybridAnalysis } from '../api/listingsApi';
 import './ResultDisplay.css';
 
 interface ResultDisplayProps {
@@ -34,7 +34,7 @@ const formatMileage = (km: string | number | null | undefined): string => {
 
 export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onNewCrawl }) => {
   const [activeTab, setActiveTab] = useState<'analysis' | 'listing' | 'details' | 'specs' | 'parts' | 'images' | 'html'>('analysis');
-  const [analysis, setAnalysis] = useState<BuyabilityAnalysis | null>(null);
+  const [analysis, setAnalysis] = useState<HybridAnalysis | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(true);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
 
@@ -82,8 +82,43 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onNewCrawl
           year: String(parsedYear),
           mileage: String(parsedMileage),
         });
+
+        // Add optional fields for statistical model
         if (engineVolume) params.append('engine_volume', String(engineVolume));
         if (enginePower) params.append('engine_power', String(enginePower));
+
+        // Add optional fields for LLM analysis
+        const make = listing.marka || listing.brand;
+        const series = listing.seri || listing.series;
+        const model = listing.model;
+        const fuelType = listing.yakit_tipi || listing.fuel_type;
+        const transmission = listing.vites || listing.transmission;
+        const bodyType = listing.kasa_tipi || listing.body_type;
+        const driveType = listing.cekis || listing.drive_type;
+        const price = listing.fiyat || listing.price;
+
+        if (make) params.append('make', String(make));
+        if (series) params.append('series', String(series));
+        if (model) params.append('model', String(model));
+        if (fuelType) params.append('fuel_type', String(fuelType));
+        if (transmission) params.append('transmission', String(transmission));
+        if (bodyType) params.append('body_type', String(bodyType));
+        if (driveType) params.append('drive_type', String(driveType));
+        if (price) params.append('price', String(price));
+
+        // Add parts data for crash score calculation
+        const partsData = listing.boyali_degisen || listing.painted_parts;
+        if (partsData) {
+          if (partsData.boyali && partsData.boyali.length > 0) {
+            params.append('painted_parts', partsData.boyali.join(','));
+          }
+          if (partsData.degisen && partsData.degisen.length > 0) {
+            params.append('changed_parts', partsData.degisen.join(','));
+          }
+          if (partsData.lokal_boyali && partsData.lokal_boyali.length > 0) {
+            params.append('local_painted_parts', partsData.lokal_boyali.join(','));
+          }
+        }
 
         const response = await fetch(`${API_BASE_URL}/api/v1/analyze?${params}`, {
           method: 'POST',
@@ -94,7 +129,8 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onNewCrawl
         }
 
         const data = await response.json();
-        setAnalysis(data.analysis);
+        // Now response contains statistical_analysis and llm_analysis
+        setAnalysis(data);
       } catch (err: any) {
         console.error('Failed to fetch analysis:', err);
         setAnalysisError(err.message || 'Analysis unavailable');
@@ -120,6 +156,77 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onNewCrawl
     if (score >= 51) return 'Dusuk Risk - Kabul Edilebilir';
     if (score >= 31) return 'Orta Risk - Dikkatli Inceleme Onerilir';
     return 'Yuksek Risk - Ciddi Endiseler Var';
+  };
+
+  // Get mechanical risk level class for LLM score
+  const getMechanicalRiskClass = (score: number): string => {
+    if (score >= 71) return 'risk-low';
+    if (score >= 51) return 'risk-moderate';
+    return 'risk-high';
+  };
+
+  // Get mechanical risk text in Turkish
+  const getMechanicalRiskText = (score: number): string => {
+    if (score >= 86) return 'Efsanevi Guvenilirlik';
+    if (score >= 71) return 'Yuksek Guvenilirlik';
+    if (score >= 51) return 'Orta Guvenilirlik';
+    if (score >= 31) return 'Dusuk Guvenilirlik - Dikkat';
+    return 'Mekanik Risk Yuksek';
+  };
+
+  // Get crash score risk level class
+  const getCrashRiskClass = (score: number): string => {
+    if (score >= 70) return 'risk-low';
+    if (score >= 40) return 'risk-moderate';
+    return 'risk-high';
+  };
+
+  // Get crash score verdict text based on score
+  const getCrashVerdictText = (score: number): string => {
+    if (score >= 90) return 'MUKEMMEL';
+    if (score >= 70) return 'IYI';
+    if (score >= 50) return 'DIKKAT';
+    if (score >= 25) return 'TEHLIKE';
+    return 'ALINMAMALI';
+  };
+
+  // Get buyability tier class for styling
+  const getBuyabilityTierClass = (tier: string): string => {
+    switch (tier) {
+      case 'GUVENLI': return 'tier-guvenli';
+      case 'NORMAL': return 'tier-normal';
+      case 'DIKKAT': return 'tier-dikkat';
+      case 'RISKLI': return 'tier-riskli';
+      case 'KACIN': return 'tier-kacin';
+      default: return 'tier-normal';
+    }
+  };
+
+  // Get buyability score color class
+  const getBuyabilityScoreClass = (score: number): string => {
+    if (score >= 70) return 'score-high';
+    if (score >= 50) return 'score-medium';
+    return 'score-low';
+  };
+
+  // Get condition label in Turkish
+  const getConditionLabel = (condition: string): string => {
+    switch (condition) {
+      case 'degisen': return 'Degisen';
+      case 'boyali': return 'Boyali';
+      case 'lokal_boyali': return 'Lokal Boyali';
+      default: return condition;
+    }
+  };
+
+  // Get condition tag class
+  const getConditionClass = (condition: string): string => {
+    switch (condition) {
+      case 'degisen': return 'condition-changed';
+      case 'boyali': return 'condition-painted';
+      case 'lokal_boyali': return 'condition-local-painted';
+      default: return '';
+    }
   };
 
   // Translate feature score names to Turkish
@@ -200,7 +307,7 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onNewCrawl
           </div>
 
           <div className="tab-content">
-            {/* Alinabilirlik Analizi Tab */}
+            {/* Alinabilirlik Analizi Tab - Hybrid Two-Column Layout */}
             {activeTab === 'analysis' && (
               <div className="analysis-section">
                 {analysisLoading && (
@@ -215,63 +322,300 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onNewCrawl
                   </div>
                 )}
                 {analysis && !analysisLoading && (
-                  <div className="analysis-content">
-                    {/* Main Risk Score */}
-                    <div className={`risk-score-card ${getRiskLevelClass(analysis.risk_score)}`}>
-                      <div className="risk-score-main">
-                        <span className="risk-score-value">{analysis.risk_score}</span>
-                        <span className="risk-score-max">/100</span>
-                      </div>
-                      <div className="risk-decision">
-                        {analysis.decision === 'BUYABLE' ? 'ALINABILIR' : 'ALINMAMALI'}
-                      </div>
-                      <div className="risk-explanation">{getRiskLevelText(analysis.risk_score)}</div>
-                    </div>
+                  <div className="hybrid-analysis-container">
 
-                    {/* Feature Scores */}
-                    <div className="feature-scores">
-                      <h4>Ozellik Puanlari</h4>
-                      <div className="feature-scores-grid">
-                        {Object.entries(analysis.feature_scores).map(([key, value]) => (
-                          <div key={key} className="feature-score-item">
-                            <span className="feature-score-label">{featureScoreLabels[key] || key}</span>
-                            <div className="feature-score-bar">
+                    {/* TOP SECTION: Buyability Score */}
+                    {analysis.buyability_score && (
+                      <div className={`buyability-score-section ${getBuyabilityTierClass(analysis.buyability_score.tier)}`}>
+                        <div className="buyability-score-header">
+                          <h3>Genel Alinabilirlik Skoru</h3>
+                          {analysis.buyability_score.warning_message && (
+                            <div className="buyability-warning">
+                              <span className="warning-icon">!</span>
+                              <span>{analysis.buyability_score.warning_message}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="buyability-score-main">
+                          <div className={`buyability-score-circle ${getBuyabilityScoreClass(analysis.buyability_score.final_score)}`}>
+                            <span className="buyability-score-value">{analysis.buyability_score.final_score}</span>
+                            <span className="buyability-score-max">/100</span>
+                          </div>
+                          <div className="buyability-tier-info">
+                            <div className={`buyability-tier-badge ${getBuyabilityTierClass(analysis.buyability_score.tier)}`}>
+                              {analysis.buyability_score.tier}
+                            </div>
+                            <p className="buyability-tier-label">{analysis.buyability_score.tier_label_tr}</p>
+                          </div>
+                        </div>
+
+                        <div className="buyability-component-scores">
+                          <div className="component-score-item">
+                            <span className="component-label">Istatistiksel</span>
+                            <div className="component-bar-container">
                               <div
-                                className="feature-score-fill"
-                                style={{ width: `${value * 100}%` }}
+                                className="component-bar"
+                                style={{ width: `${analysis.buyability_score.component_scores.statistical || 0}%` }}
                               ></div>
                             </div>
-                            <span className="feature-score-value">{(value * 100).toFixed(0)}%</span>
+                            <span className="component-value">
+                              {analysis.buyability_score.component_scores.statistical ?? '-'}
+                            </span>
                           </div>
-                        ))}
-                      </div>
-                    </div>
+                          <div className="component-score-item">
+                            <span className="component-label">Mekanik</span>
+                            <div className="component-bar-container">
+                              <div
+                                className="component-bar"
+                                style={{ width: `${analysis.buyability_score.component_scores.mechanical || 0}%` }}
+                              ></div>
+                            </div>
+                            <span className="component-value">
+                              {analysis.buyability_score.component_scores.mechanical ?? '-'}
+                            </span>
+                          </div>
+                          <div className="component-score-item">
+                            <span className="component-label">Hasar</span>
+                            <div className="component-bar-container">
+                              <div
+                                className="component-bar"
+                                style={{ width: `${analysis.buyability_score.component_scores.crash || 0}%` }}
+                              ></div>
+                            </div>
+                            <span className="component-value">
+                              {analysis.buyability_score.component_scores.crash ?? '-'}
+                            </span>
+                          </div>
+                        </div>
 
-                    {/* Risk Factors */}
-                    {analysis.risk_factors.length > 0 && (
-                      <div className="risk-factors">
-                        <h4>Risk Faktorleri</h4>
-                        <ul className="risk-factors-list">
-                          {analysis.risk_factors.map((factor, idx) => (
-                            <li key={idx} className="risk-factor-item">{factor}</li>
-                          ))}
-                        </ul>
+                        <div className="buyability-calculation-details">
+                          <details>
+                            <summary>Hesaplama Detaylari</summary>
+                            <div className="calculation-breakdown">
+                              <p><strong>Agirlikli Ortalama:</strong> {analysis.buyability_score.calculation_breakdown.weighted_average}</p>
+                              <p><strong>Minimum Skor:</strong> {analysis.buyability_score.calculation_breakdown.min_score}</p>
+                              <p><strong>Karisik Skor:</strong> {analysis.buyability_score.calculation_breakdown.blended_score}</p>
+                              <p><strong>Uygulanan Ceza:</strong> -{analysis.buyability_score.calculation_breakdown.penalty_applied}</p>
+                              <p><strong>Uygulanan Bonus:</strong> +{analysis.buyability_score.calculation_breakdown.bonus_applied}</p>
+                              <p className="calculation-formula">{analysis.buyability_score.calculation_summary}</p>
+                            </div>
+                          </details>
+                        </div>
                       </div>
                     )}
 
-                    {/* Top Contributing Features */}
-                    <div className="top-features">
-                      <h4>En Onemli Ozellikler</h4>
-                      <div className="top-features-list">
-                        {analysis.top_features.map((feat, idx) => (
-                          <div key={idx} className="top-feature-item">
-                            <span className="top-feature-name">{feat.feature}</span>
-                            <span className="top-feature-value">{feat.value.toLocaleString('tr-TR')}</span>
-                            <span className="top-feature-importance">({(feat.importance * 100).toFixed(1)}%)</span>
-                          </div>
-                        ))}
+                    {/* LEFT COLUMN: Statistical Health Score */}
+                    <div className="analysis-column statistical-column">
+                      <h3 className="analysis-column-title">Istatistiksel Saglik Skoru</h3>
+
+                      <div className={`risk-score-card ${getRiskLevelClass(analysis.statistical_analysis.risk_score)}`}>
+                        <div className="risk-score-main">
+                          <span className="risk-score-value">{analysis.statistical_analysis.risk_score}</span>
+                          <span className="risk-score-max">/100</span>
+                        </div>
+                        <div className="risk-decision">
+                          {analysis.statistical_analysis.decision === 'BUYABLE' ? 'ALINABILIR' : 'ALINMAMALI'}
+                        </div>
+                        <div className="risk-explanation">{getRiskLevelText(analysis.statistical_analysis.risk_score)}</div>
+                      </div>
+
+                      {/* Feature Scores */}
+                      <div className="feature-scores">
+                        <h4>Ozellik Puanlari</h4>
+                        <div className="feature-scores-grid">
+                          {Object.entries(analysis.statistical_analysis.feature_scores).map(([key, value]) => (
+                            <div key={key} className="feature-score-item">
+                              <span className="feature-score-label">{featureScoreLabels[key] || key}</span>
+                              <div className="feature-score-bar">
+                                <div
+                                  className="feature-score-fill"
+                                  style={{ width: `${value * 100}%` }}
+                                ></div>
+                              </div>
+                              <span className="feature-score-value">{(value * 100).toFixed(0)}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Risk Factors */}
+                      {analysis.statistical_analysis.risk_factors.length > 0 && (
+                        <div className="risk-factors">
+                          <h4>Risk Faktorleri</h4>
+                          <ul className="risk-factors-list">
+                            {analysis.statistical_analysis.risk_factors.map((factor, idx) => (
+                              <li key={idx} className="risk-factor-item">{factor}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Top Contributing Features */}
+                      <div className="top-features">
+                        <h4>En Onemli Ozellikler</h4>
+                        <div className="top-features-list">
+                          {analysis.statistical_analysis.top_features.map((feat, idx) => (
+                            <div key={idx} className="top-feature-item">
+                              <span className="top-feature-name">{feat.feature}</span>
+                              <span className="top-feature-value">{feat.value.toLocaleString('tr-TR')}</span>
+                              <span className="top-feature-importance">({(feat.importance * 100).toFixed(1)}%)</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
+
+                    {/* RIGHT COLUMN: LLM Mechanical Score */}
+                    <div className="analysis-column llm-column">
+                      <h3 className="analysis-column-title">Mekanik Guvenilirlik Skoru</h3>
+
+                      {analysis.llm_analysis ? (
+                        <>
+                          <div className={`risk-score-card ${getMechanicalRiskClass(analysis.llm_analysis.scores.mechanical_score)}`}>
+                            <div className="risk-score-main">
+                              <span className="risk-score-value">{analysis.llm_analysis.scores.mechanical_score}</span>
+                              <span className="risk-score-max">/100</span>
+                            </div>
+                            <div className="risk-decision">
+                              {analysis.llm_analysis.recommendation.buy_or_pass}
+                            </div>
+                            <div className="risk-explanation">{getMechanicalRiskText(analysis.llm_analysis.scores.mechanical_score)}</div>
+                          </div>
+
+                          {/* Car Identification */}
+                          <div className="llm-section">
+                            <h4>Arac Bilesenleri</h4>
+                            <div className="llm-info-grid">
+                              <div className="llm-info-item">
+                                <span className="llm-label">Motor Kodu:</span>
+                                <span className="llm-value">{analysis.llm_analysis.car_identification.engine_code}</span>
+                              </div>
+                              <div className="llm-info-item">
+                                <span className="llm-label">Sanziman:</span>
+                                <span className="llm-value">{analysis.llm_analysis.car_identification.transmission_name}</span>
+                              </div>
+                              {analysis.llm_analysis.car_identification.generation && (
+                                <div className="llm-info-item">
+                                  <span className="llm-label">Nesil:</span>
+                                  <span className="llm-value">{analysis.llm_analysis.car_identification.generation}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Expert Analysis */}
+                          <div className="llm-section">
+                            <h4>Uzman Analizi</h4>
+
+                            <div className="llm-analysis-block">
+                              <h5>Genel Degerlendirme</h5>
+                              <p>{analysis.llm_analysis.expert_analysis.general_comment}</p>
+                            </div>
+
+                            <div className="llm-analysis-block">
+                              <h5>Motor Guvenilirligi</h5>
+                              <p>{analysis.llm_analysis.expert_analysis.engine_reliability}</p>
+                            </div>
+
+                            <div className="llm-analysis-block">
+                              <h5>Sanziman Guvenilirligi</h5>
+                              <p>{analysis.llm_analysis.expert_analysis.transmission_reliability}</p>
+                            </div>
+
+                            <div className="llm-analysis-block">
+                              <h5>KM Dayaniklilik Kontrolu</h5>
+                              <p>{analysis.llm_analysis.expert_analysis.km_endurance_check}</p>
+                            </div>
+                          </div>
+
+                          {/* Recommendation */}
+                          <div className="llm-section llm-recommendation">
+                            <h4>Uzman Onerisi</h4>
+                            <p className="llm-verdict">{analysis.llm_analysis.recommendation.verdict}</p>
+                            <p className="llm-score-reasoning">
+                              <strong>Puan Aciklamasi:</strong> {analysis.llm_analysis.scores.reasoning_for_score}
+                            </p>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="llm-unavailable">
+                          <div className="llm-unavailable-icon">⚠️</div>
+                          <h4>LLM Analizi Mevcut Degil</h4>
+                          <p>Mekanik guvenilirlik analizi su anda kullanilamiyor. Lutfen istatistiksel skoru inceleyin.</p>
+                          <p className="llm-unavailable-hint">OpenAI API anahtari yapilandirilmamis veya arac bilgileri eksik olabilir.</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* THIRD COLUMN: Crash Score */}
+                    <div className="analysis-column crash-column">
+                      <h3 className="analysis-column-title">Hasar/Boya Skoru</h3>
+
+                      {analysis.crash_score_analysis ? (
+                        <>
+                          <div className={`risk-score-card ${getCrashRiskClass(analysis.crash_score_analysis.score)}`}>
+                            <div className="risk-score-main">
+                              <span className="risk-score-value">{analysis.crash_score_analysis.score}</span>
+                              <span className="risk-score-max">/100</span>
+                            </div>
+                            <div className="risk-decision">
+                              {getCrashVerdictText(analysis.crash_score_analysis.score)}
+                            </div>
+                            <div className="risk-explanation">{analysis.crash_score_analysis.risk_level}</div>
+                          </div>
+
+                          {/* Summary */}
+                          <div className="crash-section">
+                            <h4>Ozet</h4>
+                            <p className="crash-summary">{analysis.crash_score_analysis.summary}</p>
+                          </div>
+
+                          {/* Verdict */}
+                          <div className="crash-section crash-verdict-section">
+                            <h4>Degerlendirme</h4>
+                            <p className="crash-verdict">{analysis.crash_score_analysis.verdict}</p>
+                          </div>
+
+                          {/* Deductions List */}
+                          {analysis.crash_score_analysis.deductions.length > 0 && (
+                            <div className="crash-section">
+                              <h4>Parca Detaylari ({analysis.crash_score_analysis.total_deduction} puan dusuldu)</h4>
+                              <div className="crash-deductions-list">
+                                {analysis.crash_score_analysis.deductions.map((deduction, idx) => (
+                                  <div key={idx} className="crash-deduction-item">
+                                    <div className="crash-deduction-header">
+                                      <span className="crash-part-name">{deduction.part_name}</span>
+                                      <span className={`crash-condition-tag ${getConditionClass(deduction.condition)}`}>
+                                        {getConditionLabel(deduction.condition)}
+                                      </span>
+                                      <span className="crash-deduction-points">-{deduction.deduction}</span>
+                                    </div>
+                                    <p className="crash-deduction-advice">{deduction.advice}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* No deductions - pristine car */}
+                          {analysis.crash_score_analysis.deductions.length === 0 && (
+                            <div className="crash-section crash-pristine">
+                              <div className="crash-pristine-icon">✓</div>
+                              <h4>Kusursuz Durum</h4>
+                              <p>Bu aracta boyali, lokal boyali veya degisen parca bulunmamaktadir.</p>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="crash-unavailable">
+                          <div className="crash-unavailable-icon">⚠️</div>
+                          <h4>Hasar Skoru Hesaplanamadi</h4>
+                          <p>Boyali/degisen parca bilgisi mevcut degil.</p>
+                        </div>
+                      )}
+                    </div>
+
                   </div>
                 )}
               </div>
@@ -476,22 +820,10 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onNewCrawl
                       </div>
                     )}
 
-                    {/* Raw text fallback - show if no structured arrays but aciklama exists */}
-                    {!listing.boyali_degisen?.boyali && !listing.boyali_degisen?.degisen &&
-                     !listing.painted_parts?.boyali && !listing.painted_parts?.degisen &&
-                     (listing.boyali_degisen?.aciklama || listing.painted_parts?.aciklama) && (
-                      <div className="parts-description">
-                        <h4>Ham Veri</h4>
-                        <pre style={{ whiteSpace: 'pre-wrap', fontSize: '14px' }}>
-                          {listing.boyali_degisen?.aciklama || listing.painted_parts?.aciklama}
-                        </pre>
-                      </div>
-                    )}
-
-                    {!listing.boyali_degisen?.boyali && !listing.boyali_degisen?.degisen &&
-                     !listing.painted_parts?.boyali && !listing.painted_parts?.degisen &&
-                     !listing.boyali_degisen?.aciklama && !listing.painted_parts?.aciklama && (
-                      <p>Boyalı veya değişen parça bilgisi bulunamadı.</p>
+                    {/* No parts message - show when no boyalı, lokal boyalı, or değişen parts exist */}
+                    {!listing.boyali_degisen?.boyali && !listing.boyali_degisen?.degisen && !listing.boyali_degisen?.lokal_boyali &&
+                     !listing.painted_parts?.boyali && !listing.painted_parts?.degisen && !listing.painted_parts?.lokal_boyali && (
+                      <p className="no-parts-message">Boyalı veya değişen parça bulunmamaktadır.</p>
                     )}
                   </div>
                 ) : (

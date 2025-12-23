@@ -124,3 +124,126 @@ class HealthCheck(BaseModel):
     version: str = "1.0.0"
     timestamp: datetime
     services: Dict[str, bool] = Field(default_factory=dict)
+
+
+# ===== BUYABILITY ANALYSIS MODELS =====
+
+class CarIdentification(BaseModel):
+    """LLM-identified car components"""
+    engine_code: str = Field(..., description="Specific engine code (e.g., N47D20, 2ZR-FE)")
+    transmission_name: str = Field(..., description="Transmission name (e.g., ZF 8HP, Aisin U660E)")
+    generation: Optional[str] = Field(None, description="Car generation (e.g., F30, W212)")
+
+
+class ExpertAnalysis(BaseModel):
+    """LLM expert analysis sections"""
+    general_comment: str = Field(..., description="Overall assessment")
+    engine_reliability: str = Field(..., description="Engine reliability analysis")
+    transmission_reliability: str = Field(..., description="Transmission reliability analysis")
+    km_endurance_check: str = Field(..., description="Mileage endurance assessment")
+
+
+class Recommendation(BaseModel):
+    """LLM buying recommendation"""
+    verdict: str = Field(..., description="Detailed recommendation")
+    buy_or_pass: str = Field(..., description="Clear verdict (High/Medium/Low Risk)")
+
+
+class MechanicalScores(BaseModel):
+    """LLM mechanical scores"""
+    mechanical_score: int = Field(..., ge=0, le=100, description="Mechanical buyability score (0-100)")
+    reasoning_for_score: str = Field(..., description="Score calculation reasoning")
+
+
+class LLMMechanicalAnalysis(BaseModel):
+    """Complete LLM mechanical analysis response"""
+    car_identification: CarIdentification
+    expert_analysis: ExpertAnalysis
+    recommendation: Recommendation
+    scores: MechanicalScores
+
+
+class FeatureScore(BaseModel):
+    """Individual feature contribution"""
+    feature: str
+    value: float
+    importance: float
+
+
+class StatisticalAnalysis(BaseModel):
+    """Statistical buyability analysis (existing ML model)"""
+    risk_score: int = Field(..., ge=0, le=100, description="Statistical risk score")
+    decision: str = Field(..., description="BUYABLE or NOT BUYABLE")
+    probability: float = Field(..., ge=0, le=1)
+    health_score: float = Field(..., ge=0, le=1)
+    risk_factors: List[str] = Field(default_factory=list)
+    feature_scores: Dict[str, float] = Field(default_factory=dict)
+    top_features: List[Dict[str, Any]] = Field(default_factory=list)
+    explanation: str
+
+
+class HybridAnalysisResponse(BaseModel):
+    """Combined response with both statistical and LLM analysis"""
+    status: str = Field(default="success")
+    input: Dict[str, Any] = Field(..., description="Input parameters")
+    statistical_analysis: StatisticalAnalysis = Field(..., description="ML-based statistical analysis")
+    llm_analysis: Optional[LLMMechanicalAnalysis] = Field(None, description="LLM mechanical analysis (None if unavailable)")
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+
+# ===== CRASH SCORE MODELS =====
+
+class PartDeduction(BaseModel):
+    """Details of a single part deduction in crash score"""
+    part_name: str = Field(..., description="Name of the part in Turkish")
+    condition: str = Field(..., description="Condition: degisen, boyali, or lokal_boyali")
+    deduction: int = Field(..., ge=0, description="Points deducted for this part")
+    advice: str = Field(..., description="Expert advice for this specific part condition")
+
+
+class CrashScoreAnalysis(BaseModel):
+    """Crash score analysis based on painted/changed parts"""
+    score: int = Field(..., ge=0, le=100, description="Crash score (100 = pristine, 0 = severe damage)")
+    total_deduction: int = Field(..., ge=0, description="Total points deducted")
+    deductions: List[PartDeduction] = Field(default_factory=list, description="List of individual part deductions")
+    summary: str = Field(..., description="Overall summary of crash history")
+    risk_level: str = Field(..., description="Risk level classification")
+    verdict: str = Field(..., description="Final recommendation")
+
+
+# ===== BUYABILITY SCORE MODELS =====
+
+class ComponentScores(BaseModel):
+    """Individual component scores used in buyability calculation"""
+    statistical: Optional[int] = Field(None, ge=0, le=100, description="ML-based statistical health score")
+    mechanical: Optional[int] = Field(None, ge=0, le=100, description="LLM-based mechanical reliability score")
+    crash: Optional[int] = Field(None, ge=0, le=100, description="Rule-based crash/damage score")
+
+
+class CalculationBreakdown(BaseModel):
+    """Breakdown of buyability score calculation"""
+    weighted_average: float = Field(..., description="Initial weighted average of component scores")
+    min_score: int = Field(..., description="Minimum of all component scores")
+    blended_score: float = Field(..., description="Score after min pull and GM dampener")
+    penalty_applied: int = Field(..., ge=0, description="Penalty points deducted for low scores")
+    bonus_applied: int = Field(..., ge=0, description="Bonus points added for safe cars")
+
+
+class BuyabilityScore(BaseModel):
+    """
+    Comprehensive buyability score combining all three analyses.
+
+    Formula:
+    1. Weighted average: S*0.25 + M*0.40 + C*0.35
+    2. Min pull: blend with min_score (alpha=0.30)
+    3. GM dampener: penalize imbalance (beta=0.05)
+    4. Critical failure penalties
+    5. Tier classification
+    """
+    final_score: int = Field(..., ge=0, le=100, description="Final buyability score (0-100)")
+    tier: str = Field(..., description="Tier classification (KACIN, RISKLI, DIKKAT, NORMAL, GUVENLI)")
+    tier_label_tr: str = Field(..., description="Turkish label for the tier")
+    component_scores: ComponentScores = Field(..., description="Individual component scores")
+    calculation_breakdown: CalculationBreakdown = Field(..., description="Calculation details")
+    calculation_summary: str = Field(..., description="Human-readable calculation summary")
+    warning_message: Optional[str] = Field(None, description="Warning if any score is critically low")

@@ -357,21 +357,42 @@ async def analyze_listing(
 
 @router.post("/analyze", tags=["Listings"])
 async def analyze_car_direct(
+    # Core required fields for statistical model
     year: int = Query(..., description="Model year"),
     mileage: int = Query(..., description="Total mileage in km"),
+
+    # Optional fields for statistical model
     engine_volume: Optional[str] = Query(None, description="Engine volume (e.g., '1600' or '1301-1600')"),
-    engine_power: Optional[str] = Query(None, description="Engine power (e.g., '120' or '101-125')")
+    engine_power: Optional[str] = Query(None, description="Engine power (e.g., '120' or '101-125')"),
+
+    # Optional fields for LLM analysis (enhanced analysis)
+    make: Optional[str] = Query(None, description="Car brand/make (e.g., 'BMW')"),
+    series: Optional[str] = Query(None, description="Car series (e.g., '3 Serisi')"),
+    model: Optional[str] = Query(None, description="Car model (e.g., '320d')"),
+    fuel_type: Optional[str] = Query(None, description="Fuel type (e.g., 'Dizel')"),
+    transmission: Optional[str] = Query(None, description="Transmission type (e.g., 'Otomatik')"),
+    body_type: Optional[str] = Query(None, description="Body type (e.g., 'Sedan')"),
+    drive_type: Optional[str] = Query(None, description="Drive type (e.g., 'Arkadan Itisli')"),
+    price: Optional[str] = Query(None, description="Price if available"),
+
+    # Crash score fields - painted/changed parts (comma-separated)
+    painted_parts: Optional[str] = Query(None, description="Comma-separated list of painted (boyali) parts"),
+    changed_parts: Optional[str] = Query(None, description="Comma-separated list of changed (degisen) parts"),
+    local_painted_parts: Optional[str] = Query(None, description="Comma-separated list of locally painted (lokal boyali) parts"),
 ):
     """
-    Analyze a car directly without saving to database.
+    Hybrid car buyability analysis combining statistical ML model, LLM expert analysis, and crash score.
 
-    This endpoint allows quick analysis of any car by providing the features directly.
+    Returns:
+    - **Statistical Health Score** (ML-based, existing model) - Based on year, mileage, engine specs
+    - **LLM Mechanical Reliability Score** (GPT-4 based expert analysis) - Based on specific engine/transmission knowledge
+    - **Crash Score** (rule-based) - Based on painted/changed/locally-painted parts
+
+    Core fields (year, mileage) are required.
+    Additional fields (make, model, etc.) enhance the LLM analysis quality.
+    Parts fields (painted_parts, changed_parts, local_painted_parts) enable crash score calculation.
+
     No authentication required.
-
-    - **year**: Model year (e.g., 2015)
-    - **mileage**: Total mileage in km (e.g., 120000)
-    - **engine_volume**: Engine volume in cc (optional)
-    - **engine_power**: Engine power in HP (optional)
     """
     if not BUYABILITY_MODEL_AVAILABLE:
         raise HTTPException(
@@ -380,7 +401,7 @@ async def analyze_car_direct(
         )
 
     try:
-        # Build sample dict
+        # ===== 1. STATISTICAL ANALYSIS (existing model) =====
         sample = {
             "Model Yıl": year,
             "Km": mileage,
@@ -388,19 +409,126 @@ async def analyze_car_direct(
             "Beygir Gucu": engine_power if engine_power else "100"
         }
 
-        # Get buyability prediction
-        analysis = predict_buyability(sample)
+        # Get statistical buyability prediction
+        statistical_result = predict_buyability(sample)
 
-        return {
+        # ===== 2. LLM MECHANICAL ANALYSIS (new) =====
+        llm_result = None
+
+        # Build comprehensive car data for LLM
+        car_data = {
+            "Model Yıl": year,
+            "Km": mileage,
+            "marka": make,
+            "seri": series,
+            "model": model,
+            "yakit_tipi": fuel_type,
+            "vites": transmission,
+            "kasa_tipi": body_type,
+            "motor_hacmi": engine_volume,
+            "motor_gucu": engine_power,
+            "cekis": drive_type,
+            "fiyat": price
+        }
+
+        # Only call LLM if we have enough data (at least make and model)
+        if make or model:
+            try:
+                from api.services.llm_service import llm_analyzer
+                llm_result = await llm_analyzer.analyze_mechanical_reliability(car_data)
+            except Exception as llm_error:
+                logger.warning(f"LLM analysis failed: {llm_error}")
+                # Continue without LLM analysis - graceful degradation
+        else:
+            logger.info("Skipping LLM analysis - no make/model provided")
+
+        # ===== 3. CRASH SCORE ANALYSIS (new) =====
+        crash_score_result = None
+
+        # Parse comma-separated parts lists
+        parsed_painted = [p.strip() for p in painted_parts.split(',')] if painted_parts else None
+        parsed_changed = [p.strip() for p in changed_parts.split(',')] if changed_parts else None
+        parsed_local_painted = [p.strip() for p in local_painted_parts.split(',')] if local_painted_parts else None
+
+        # Calculate crash score if any parts data is provided
+        if parsed_painted or parsed_changed or parsed_local_painted:
+            try:
+                from api.services.crash_score_service import calculate_crash_score, crash_score_to_dict
+                crash_result = calculate_crash_score(
+                    painted_parts=parsed_painted,
+                    changed_parts=parsed_changed,
+                    local_painted_parts=parsed_local_painted
+                )
+                crash_score_result = crash_score_to_dict(crash_result)
+            except Exception as crash_error:
+                logger.warning(f"Crash score calculation failed: {crash_error}")
+                # Continue without crash score - graceful degradation
+        else:
+            # No parts data provided - return perfect score (100)
+            crash_score_result = {
+                "score": 100,
+                "total_deduction": 0,
+                "deductions": [],
+                "summary": "Boyali veya degisen parca bilgisi mevcut degil. Arac orijinal durumda kabul edildi.",
+                "risk_level": "Bilinmiyor",
+                "verdict": "Parca bilgisi yok - Orijinal kabul edildi"
+            }
+
+        # ===== 4. CALCULATE BUYABILITY SCORE =====
+        # Extract individual scores for buyability calculation
+        statistical_score = statistical_result.get('risk_score') if statistical_result else None
+        mechanical_score_val = None
+        if llm_result and llm_result.get('scores'):
+            mechanical_score_val = llm_result['scores'].get('mechanical_score')
+        crash_score_val = crash_score_result.get('score') if crash_score_result else None
+
+        # Calculate comprehensive buyability score
+        buyability_result = None
+        try:
+            from api.services.buyability_score_service import calculate_buyability_score, buyability_score_to_dict
+            buyability_calc = calculate_buyability_score(
+                statistical_score=statistical_score,
+                mechanical_score=mechanical_score_val,
+                crash_score=crash_score_val
+            )
+            buyability_result = buyability_score_to_dict(buyability_calc)
+        except Exception as buyability_error:
+            logger.warning(f"Buyability score calculation failed: {buyability_error}")
+            # Continue without buyability score - graceful degradation
+
+        # ===== 5. BUILD HYBRID RESPONSE =====
+        from datetime import datetime
+
+        response = {
             "status": "success",
             "input": {
                 "year": year,
                 "mileage": mileage,
                 "engine_volume": engine_volume,
-                "engine_power": engine_power
+                "engine_power": engine_power,
+                "make": make,
+                "series": series,
+                "model": model,
+                "fuel_type": fuel_type,
+                "transmission": transmission,
+                "body_type": body_type,
+                "drive_type": drive_type,
+                "price": price,
+                "painted_parts": parsed_painted,
+                "changed_parts": parsed_changed,
+                "local_painted_parts": parsed_local_painted
             },
-            "analysis": analysis
+            "buyability_score": buyability_result,
+            "statistical_analysis": statistical_result,
+            "llm_analysis": llm_result,
+            "crash_score_analysis": crash_score_result,
+            "timestamp": datetime.utcnow().isoformat()
         }
+
+        return response
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error analyzing car: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
