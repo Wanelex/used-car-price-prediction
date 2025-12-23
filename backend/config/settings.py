@@ -4,7 +4,7 @@ from typing import Optional
 
 class Settings(BaseSettings):
     """Application configuration"""
-    DEV_MODE: bool = True
+    DEV_MODE: bool = False
     # API Settings
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000

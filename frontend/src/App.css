@@ -27,12 +27,21 @@ body {
   background: var(--bg-primary);
 }
 
+/* ===== BIRD WING NAVBAR ===== */
 .app-header {
   position: fixed;
   top: 16px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+
+/* Center section - main navbar */
+.header-center {
   background: var(--bg-glass);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -41,17 +50,18 @@ body {
   color: var(--text-primary);
   padding: 0.6rem 1.5rem;
   box-shadow: var(--shadow-glass);
-  max-width: 500px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  z-index: 2;
 }
 
 .header-content {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex-shrink: 0;
 }
 
 .header-logo {
@@ -64,6 +74,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .app-header h1 {
@@ -81,33 +93,120 @@ body {
   line-height: 1.2;
 }
 
-.logout-button {
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Wings - navigation sections */
+.header-wing {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-glass);
+  padding: 0.4rem 0.6rem;
+  box-shadow: var(--shadow-glass);
+  z-index: 1;
+}
+
+.left-wing {
+  border-radius: var(--radius-xl) 0 0 var(--radius-xl);
+  padding-right: 1rem;
+  margin-right: -0.5rem;
+  border-right: none;
+  min-width: 120px;
+  justify-content: flex-end;
+}
+
+.right-wing {
+  border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
+  padding-left: 1rem;
+  margin-left: -0.5rem;
+  border-left: none;
+  min-width: 120px;
+  justify-content: flex-start;
+}
+
+.wing-nav-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.4rem 0.7rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.wing-nav-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.wing-nav-btn.active {
+  color: var(--bg-primary);
+  background: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Adjust header when wings are visible */
+.app-header.with-wings .header-center {
+  border-radius: var(--radius-lg);
+}
+
+.header-action-button {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   color: var(--text-primary);
-  width: 36px;
   height: 36px;
+  padding: 0 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 0;
   cursor: pointer;
   transition: all 0.3s ease;
   flex-shrink: 0;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
-.logout-button:hover {
+.header-action-button .action-text {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-width 0.3s ease, opacity 0.3s ease, margin-left 0.3s ease;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-left: 0;
+}
+
+.header-action-button:hover {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.15);
-  transform: translateY(-1px);
+  padding: 0 14px;
 }
 
-.logout-button:active {
+.header-action-button:hover .action-text {
+  max-width: 150px;
+  opacity: 1;
+  margin-left: 8px;
+}
+
+.header-action-button:active {
   transform: translateY(0);
 }
 
-.logout-button svg {
+.header-action-button svg {
   stroke: currentColor;
+  flex-shrink: 0;
 }
 
 .app-main {
@@ -124,15 +223,50 @@ body {
   -webkit-backdrop-filter: blur(10px);
   border-top: 1px solid var(--border-glass);
   color: var(--text-muted);
-  text-align: center;
   padding: 1.5rem;
   margin-top: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
 }
 
 .app-footer p {
   margin: 0;
   font-size: 0.85rem;
   color: var(--text-muted);
+}
+
+.footer-metadata-btn {
+  position: absolute;
+  right: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.footer-metadata-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.footer-metadata-btn.active {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border-color: var(--text-primary);
+}
+
+.footer-metadata-btn svg {
+  flex-shrink: 0;
 }
 
 /* Crawl Form */

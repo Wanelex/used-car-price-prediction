@@ -1,8 +1,51 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { crawlerApi } from '../api/crawlerApi';
-import type { CrawlRequest, CrawlResult } from '../api/crawlerApi';
+import type { CrawlRequest, CrawlResult, CarListing } from '../api/crawlerApi';
 
 type CrawlState = 'idle' | 'loading' | 'completed' | 'failed';
+
+// Convert stored listing to CrawlResult format for display
+function listingToCrawlResult(listing: CarListing): CrawlResult {
+  // Normalize images to string URLs (handle both string and object formats)
+  const normalizedImages = (listing.images || []).map((img) =>
+    typeof img === 'string' ? img : img.url
+  );
+
+  // Convert English field names back to Turkish for ResultDisplay compatibility
+  const sahibindenListing = {
+    ilan_no: listing.listing_id,
+    marka: listing.brand,
+    seri: listing.series,
+    model: listing.model,
+    yil: listing.year,
+    fiyat: listing.price,
+    km: listing.mileage,
+    yakit_tipi: listing.fuel_type,
+    vites: listing.transmission,
+    kasa_tipi: listing.body_type,
+    motor_gucu: listing.engine_power,
+    motor_hacmi: listing.engine_volume,
+    cekis: listing.drive_type,
+    renk: listing.color,
+    kimden: listing.seller_type,
+    il: listing.location,
+    baslik: listing.title,
+    aciklama: listing.description,
+    teknik_ozellikler: listing.technical_specs,
+    boyali_degisen: listing.painted_parts,
+    gorseller: normalizedImages,
+  };
+
+  return {
+    job_id: `stored-${listing.listing_id}`,
+    url: `https://www.sahibinden.com/ilan/${listing.listing_id}`,
+    status: 'completed',
+    result: {
+      sahibinden_listing: sahibindenListing,
+      images: normalizedImages,
+    },
+  } as CrawlResult;
+}
 
 export const useCrawler = () => {
   const [state, setState] = useState<CrawlState>('idle');
@@ -122,6 +165,20 @@ export const useCrawler = () => {
     startTimeRef.current = null;
   }, []);
 
+  // Load a stored listing from history
+  const loadStoredListing = useCallback((listing: CarListing) => {
+    stopPolling();
+    stopTimer();
+    const crawlResult = listingToCrawlResult(listing);
+    setResult(crawlResult);
+    setJobId(crawlResult.job_id);
+    setState('completed');
+    setProgress(100);
+    setStatusMessage('Loaded from history');
+    setError(null);
+    setElapsedSeconds(0);
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -140,6 +197,7 @@ export const useCrawler = () => {
     elapsedSeconds,
     startCrawl,
     reset,
+    loadStoredListing,
   };
 };
 

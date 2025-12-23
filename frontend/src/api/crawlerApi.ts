@@ -151,6 +151,117 @@ export async function getCrawlResult(jobId: string): Promise<CrawlResult> {
 }
 
 /**
+ * Listing interface (from database)
+ */
+export interface CarListing {
+  id?: string;
+  listing_id: string;
+  brand?: string;
+  series?: string;
+  model?: string;
+  year?: number;
+  price?: number;
+  mileage?: number;
+  fuel_type?: string;
+  transmission?: string;
+  body_type?: string;
+  engine_power?: string;
+  engine_volume?: string;
+  drive_type?: string;
+  color?: string;
+  location?: string;
+  seller_type?: string;
+  title?: string;
+  description?: string;
+  technical_specs?: Record<string, any>;
+  painted_parts?: Record<string, any>;
+  crawled_at?: string;
+  data_quality_score?: number;
+  images?: Array<string | { url: string; is_primary?: boolean }>;
+}
+
+/**
+ * GET LISTINGS (user's analysis history)
+ * GET /api/v1/listings
+ */
+export async function getListings(limit = 50, skip = 0): Promise<{
+  status: string;
+  count: number;
+  data: CarListing[];
+}> {
+  const auth = getAuth();
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
+
+  const response = await api.get("/listings", {
+    params: { limit, skip },
+    headers: {
+      "user-id": user.uid
+    }
+  });
+  return response.data;
+}
+
+/**
+ * GET SINGLE LISTING
+ * GET /api/v1/listings/{listing_id}
+ */
+export async function getListing(listingId: string): Promise<{
+  status: string;
+  data: CarListing;
+}> {
+  const auth = getAuth();
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
+
+  const response = await api.get(`/listings/${listingId}`, {
+    headers: {
+      "user-id": user.uid
+    }
+  });
+  return response.data;
+}
+
+/**
+ * DELETE LISTING
+ * DELETE /api/v1/listings/{listing_id}
+ */
+export async function deleteListing(listingId: string): Promise<{
+  status: string;
+  message: string;
+}> {
+  const auth = getAuth();
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
+
+  const response = await api.delete(`/listings/${listingId}`, {
+    headers: {
+      "user-id": user.uid
+    }
+  });
+  return response.data;
+}
+
+/**
+ * ANALYZE LISTING
+ * POST /api/v1/analyze
+ */
+export async function analyzeListing(params: Record<string, string>): Promise<any> {
+  const queryString = new URLSearchParams(params).toString();
+  const response = await api.post(`/analyze?${queryString}`);
+  return response.data;
+}
+
+/**
  * Export as object (opsiyonel kullanım)
  */
 export const crawlerApi = {
@@ -161,6 +272,10 @@ export const crawlerApi = {
   listJobs,
   deleteJob,
   deleteAllJobs,
+  getListings,
+  getListing,
+  deleteListing,
+  analyzeListing,
 };
 
 export default crawlerApi;

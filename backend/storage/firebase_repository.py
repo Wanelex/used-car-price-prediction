@@ -5,6 +5,7 @@ from datetime import datetime
 from loguru import logger
 import firebase_admin
 from firebase_admin import credentials, firestore
+from google.cloud.firestore_v1.base_query import FieldFilter
 from config.settings import settings
 
 
@@ -137,7 +138,7 @@ class FirestoreRepository:
 
             # Filter by user if provided
             if user_id:
-                query = query.where('user_id', '==', user_id)
+                query = query.where(filter=FieldFilter('user_id', '==', user_id))
 
             # Order by crawled_at descending (newest first)
             if direction.upper() == 'DESC':
@@ -163,7 +164,7 @@ class FirestoreRepository:
         """List listings by brand"""
         try:
             docs = self.db.collection('car_listings').where(
-                'brand', '==', brand
+                filter=FieldFilter('brand', '==', brand)
             ).limit(limit).stream()
 
             listings = []
@@ -187,9 +188,9 @@ class FirestoreRepository:
         """List listings by year range"""
         try:
             docs = self.db.collection('car_listings').where(
-                'year', '>=', min_year
+                filter=FieldFilter('year', '>=', min_year)
             ).where(
-                'year', '<=', max_year
+                filter=FieldFilter('year', '<=', max_year)
             ).limit(limit).stream()
 
             listings = []
@@ -213,9 +214,9 @@ class FirestoreRepository:
         """List listings by price range"""
         try:
             docs = self.db.collection('car_listings').where(
-                'price', '>=', min_price
+                filter=FieldFilter('price', '>=', min_price)
             ).where(
-                'price', '<=', max_price
+                filter=FieldFilter('price', '<=', max_price)
             ).limit(limit).stream()
 
             listings = []

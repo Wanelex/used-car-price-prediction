@@ -1,3 +1,4 @@
+/* Result Display Container */
 .result-display {
   max-width: 1200px;
   margin: 0 auto;
@@ -7,42 +8,196 @@
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-glass);
-  overflow: hidden;
+  overflow: visible;
 }
 
-.result-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 24px;
+/* Car Title Section */
+.car-title-section {
+  text-align: center;
+  padding: 12px 24px;
   background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border-glass);
 }
 
-.result-header h2 {
+.car-title {
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text-primary);
+  letter-spacing: -0.3px;
 }
 
-.new-crawl-button {
-  padding: 8px 16px;
-  background: var(--bg-glass);
-  border: 1px solid var(--border-glass);
-  color: var(--text-primary);
+/* ===== HERO SCORE SECTION ===== */
+.hero-score-section {
+  grid-column: 1 / -1; /* Span all columns in grid */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 20px;
+  background: var(--bg-tertiary);
   border-radius: var(--radius-lg);
-  cursor: pointer;
+  margin-bottom: 20px;
+}
+
+.hero-image-side {
+  flex: 1;
+  max-width: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-score-center {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+}
+
+.hero-score-circle {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border: 3px solid var(--border-glass);
+}
+
+.hero-score-circle.score-high {
+  border-color: var(--success);
+  box-shadow: 0 4px 20px rgba(74, 222, 128, 0.25);
+}
+
+.hero-score-circle.score-medium {
+  border-color: var(--warning);
+  box-shadow: 0 4px 20px rgba(251, 191, 36, 0.25);
+}
+
+.hero-score-circle.score-low {
+  border-color: var(--danger);
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.25);
+}
+
+.hero-score-value {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.hero-score-max {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.hero-tier-badge {
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
   font-size: 13px;
-  transition: all 0.2s;
-  white-space: nowrap;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-.new-crawl-button:hover {
-  background: var(--bg-glass-hover);
+.hero-tier-badge.tier-guvenli {
+  background: rgba(74, 222, 128, 0.2);
+  color: var(--success);
+  border: 1px solid var(--success);
 }
 
-/* Tabs */
+.hero-tier-badge.tier-normal {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+  border: 1px solid #3b82f6;
+}
+
+.hero-tier-badge.tier-dikkat {
+  background: rgba(251, 191, 36, 0.2);
+  color: var(--warning);
+  border: 1px solid var(--warning);
+}
+
+.hero-tier-badge.tier-riskli {
+  background: rgba(249, 115, 22, 0.2);
+  color: #f97316;
+  border: 1px solid #f97316;
+}
+
+.hero-tier-badge.tier-kacin {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+.hero-component-scores {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.hero-component-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.hero-component-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.hero-component-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.hero-car-image {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-glass);
+}
+
+@media (max-width: 900px) {
+  .hero-score-section {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .hero-image-side {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .hero-car-image {
+    height: 200px;
+  }
+
+  .hero-score-center {
+    order: -1;
+    padding: 0;
+  }
+
+  .hero-component-scores {
+    flex-direction: row;
+    justify-content: center;
+  }
+}
+
+/* Legacy tabs (keeping for compatibility) */
 .tabs {
   display: flex;
   background: var(--bg-tertiary);
@@ -359,11 +514,19 @@ h3 {
 }
 
 /* Responsive */
+@media (max-width: 768px) {
+  .car-title-section {
+    padding: 10px 16px;
+  }
+
+  .car-title {
+    font-size: 14px;
+  }
+}
+
 @media (max-width: 600px) {
-  .result-header {
-    flex-direction: column;
-    gap: 12px;
-    text-align: center;
+  .result-display {
+    border-radius: var(--radius-lg);
   }
 
   .listing-images {
@@ -383,13 +546,25 @@ h3 {
     padding: 4px 16px 12px;
   }
 
+  .car-title-section {
+    padding: 8px 12px;
+  }
+
+  .car-title {
+    font-size: 13px;
+  }
+
+  /* Legacy tabs */
   .tabs {
     justify-content: flex-start;
+    gap: 3px;
   }
 
   .tab {
-    padding: 12px 14px;
-    font-size: 12px;
+    padding: 10px 12px;
+    font-size: 11px;
+    min-width: auto;
+    flex: 0 0 auto;
   }
 }
 

@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import type { CrawlResult } from '../api/crawlerApi';
+import { analyzeListing } from '../api/crawlerApi';
 import type { HybridAnalysis } from '../api/listingsApi';
 import './ResultDisplay.css';
 
+export type TabType = 'analysis' | 'listing' | 'specs' | 'parts' | 'html';
+
 interface ResultDisplayProps {
   result: CrawlResult;
-  onNewCrawl: () => void;
+  activeTab: TabType;
 }
-
-// API base URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // Helper to format price in Turkish Lira
 const formatPrice = (price: string | number | null | undefined): string => {
@@ -32,8 +32,7 @@ const formatMileage = (km: string | number | null | undefined): string => {
   return new Intl.NumberFormat('tr-TR').format(numKm) + ' km';
 };
 
-export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onNewCrawl }) => {
-  const [activeTab, setActiveTab] = useState<'analysis' | 'listing' | 'details' | 'specs' | 'parts' | 'images' | 'html'>('analysis');
+export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab }) => {
   const [analysis, setAnalysis] = useState<HybridAnalysis | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(true);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
@@ -41,13 +40,36 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onNewCrawl
   const crawlData = result.result;
   const listing = crawlData?.sahibinden_listing;
 
-  // Fetch buyability analysis when component mounts
+  // Fetch buyability analysis when component mounts (with localStorage caching)
   useEffect(() => {
     const fetchAnalysis = async () => {
       if (!listing) {
         setAnalysisLoading(false);
         setAnalysisError('No listing data available');
         return;
+      }
+
+      // Get listing ID for cache key
+      const listingId = listing.ilan_no || listing.listing_id;
+      const cacheKey = listingId ? `analysis_cache_${listingId}` : null;
+
+      // Check localStorage cache first
+      if (cacheKey) {
+        try {
+          const cached = localStorage.getItem(cacheKey);
+          if (cached) {
+            const cachedData = JSON.parse(cached);
+            // Check if cache is still valid (24 hours)
+            if (cachedData.timestamp && Date.now() - cachedData.timestamp < 24 * 60 * 60 * 1000) {
+              console.log('Using cached analysis for listing:', listingId);
+              setAnalysis(cachedData.data);
+              setAnalysisLoading(false);
+              return;
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to read analysis cache:', e);
+        }
       }
 
       // Extract year and mileage from listing
@@ -78,14 +100,14 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onNewCrawl
         setAnalysisLoading(true);
         setAnalysisError(null);
 
-        const params = new URLSearchParams({
+        const params: Record<string, string> = {
           year: String(parsedYear),
           mileage: String(parsedMileage),
-        });
+        };
 
         // Add optional fields for statistical model
-        if (engineVolume) params.append('engine_volume', String(engineVolume));
-        if (enginePower) params.append('engine_power', String(enginePower));
+        if (engineVolume) params.engine_volume = String(engineVolume);
+        if (enginePower) params.engine_power = String(enginePower);
 
         // Add optional fields for LLM analysis
         const make = listing.marka || listing.brand;
@@ -97,40 +119,46 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onNewCrawl
         const driveType = listing.cekis || listing.drive_type;
         const price = listing.fiyat || listing.price;
 
-        if (make) params.append('make', String(make));
-        if (series) params.append('series', String(series));
-        if (model) params.append('model', String(model));
-        if (fuelType) params.append('fuel_type', String(fuelType));
-        if (transmission) params.append('transmission', String(transmission));
-        if (bodyType) params.append('body_type', String(bodyType));
-        if (driveType) params.append('drive_type', String(driveType));
-        if (price) params.append('price', String(price));
+        if (make) params.make = String(make);
+        if (series) params.series = String(series);
+        if (model) params.model = String(model);
+        if (fuelType) params.fuel_type = String(fuelType);
+        if (transmission) params.transmission = String(transmission);
+        if (bodyType) params.body_type = String(bodyType);
+        if (driveType) params.drive_type = String(driveType);
+        if (price) params.price = String(price);
 
         // Add parts data for crash score calculation
         const partsData = listing.boyali_degisen || listing.painted_parts;
         if (partsData) {
           if (partsData.boyali && partsData.boyali.length > 0) {
-            params.append('painted_parts', partsData.boyali.join(','));
+            params.painted_parts = partsData.boyali.join(',');
           }
           if (partsData.degisen && partsData.degisen.length > 0) {
-            params.append('changed_parts', partsData.degisen.join(','));
+            params.changed_parts = partsData.degisen.join(',');
           }
           if (partsData.lokal_boyali && partsData.lokal_boyali.length > 0) {
-            params.append('local_painted_parts', partsData.lokal_boyali.join(','));
+            params.local_painted_parts = partsData.lokal_boyali.join(',');
           }
         }
 
-        const response = await fetch(`${API_BASE_URL}/api/v1/analyze?${params}`, {
-          method: 'POST',
-        });
-
-        if (!response.ok) {
-          throw new Error('Analysis request failed');
-        }
-
-        const data = await response.json();
+        // Use authenticated API call
+        const data = await analyzeListing(params);
         // Now response contains statistical_analysis and llm_analysis
         setAnalysis(data);
+
+        // Cache the analysis result in localStorage
+        if (cacheKey) {
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify({
+              data,
+              timestamp: Date.now()
+            }));
+            console.log('Cached analysis for listing:', listingId);
+          } catch (e) {
+            console.warn('Failed to cache analysis:', e);
+          }
+        }
       } catch (err: any) {
         console.error('Failed to fetch analysis:', err);
         setAnalysisError(err.message || 'Analysis unavailable');
@@ -250,63 +278,16 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onNewCrawl
   const listingImages = allImages.slice(0, 2);
 
   return (
-    <div className="result-display">
-      <div className="result-header">
-        <h2>{listingTitle}</h2>
-        <button className="new-crawl-button" onClick={onNewCrawl}>
-          Yeni Tarama Başlat
-        </button>
-      </div>
+      <div className="result-display">
+        {/* Show listing data if available */}
+        {listing ? (
+          <>
+            {/* Car Title - Centered below tabs */}
+            <div className="car-title-section">
+              <h1 className="car-title">{listingTitle}</h1>
+            </div>
 
-      {/* Show listing data if available */}
-      {listing ? (
-        <>
-          <div className="tabs">
-            <button
-              className={`tab ${activeTab === 'analysis' ? 'active' : ''}`}
-              onClick={() => setActiveTab('analysis')}
-            >
-              Alinabilirlik Analizi
-            </button>
-            <button
-              className={`tab ${activeTab === 'listing' ? 'active' : ''}`}
-              onClick={() => setActiveTab('listing')}
-            >
-              İlan Bilgileri
-            </button>
-            <button
-              className={`tab ${activeTab === 'details' ? 'active' : ''}`}
-              onClick={() => setActiveTab('details')}
-            >
-              İlan Detayları
-            </button>
-            <button
-              className={`tab ${activeTab === 'specs' ? 'active' : ''}`}
-              onClick={() => setActiveTab('specs')}
-            >
-              Teknik Özellikler
-            </button>
-            <button
-              className={`tab ${activeTab === 'parts' ? 'active' : ''}`}
-              onClick={() => setActiveTab('parts')}
-            >
-              Boyalı/Değişen
-            </button>
-            <button
-              className={`tab ${activeTab === 'images' ? 'active' : ''}`}
-              onClick={() => setActiveTab('images')}
-            >
-              Görseller
-            </button>
-            <button
-              className={`tab ${activeTab === 'html' ? 'active' : ''}`}
-              onClick={() => setActiveTab('html')}
-            >
-              HTML/Metadata
-            </button>
-          </div>
-
-          <div className="tab-content">
+            <div className="tab-content">
             {/* Alinabilirlik Analizi Tab - Hybrid Two-Column Layout */}
             {activeTab === 'analysis' && (
               <div className="analysis-section">
@@ -324,83 +305,54 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onNewCrawl
                 {analysis && !analysisLoading && (
                   <div className="hybrid-analysis-container">
 
-                    {/* TOP SECTION: Buyability Score */}
+                    {/* HERO SECTION: Image + Score + Image */}
                     {analysis.buyability_score && (
-                      <div className={`buyability-score-section ${getBuyabilityTierClass(analysis.buyability_score.tier)}`}>
-                        <div className="buyability-score-header">
-                          <h3>Genel Alinabilirlik Skoru</h3>
-                          {analysis.buyability_score.warning_message && (
-                            <div className="buyability-warning">
-                              <span className="warning-icon">!</span>
-                              <span>{analysis.buyability_score.warning_message}</span>
-                            </div>
+                      <div className="hero-score-section">
+                        {/* Left: First Car Image */}
+                        <div className="hero-image-side">
+                          {allImages.length > 0 && (
+                            <img
+                              src={allImages[0]}
+                              alt={listingTitle}
+                              className="hero-car-image"
+                              onError={(e) => (e.currentTarget.style.display = 'none')}
+                            />
                           )}
                         </div>
-
-                        <div className="buyability-score-main">
-                          <div className={`buyability-score-circle ${getBuyabilityScoreClass(analysis.buyability_score.final_score)}`}>
-                            <span className="buyability-score-value">{analysis.buyability_score.final_score}</span>
-                            <span className="buyability-score-max">/100</span>
+                        {/* Center: Score Info */}
+                        <div className="hero-score-center">
+                          <div className={`hero-score-circle ${getBuyabilityScoreClass(analysis.buyability_score.final_score)}`}>
+                            <span className="hero-score-value">{analysis.buyability_score.final_score}</span>
+                            <span className="hero-score-max">/100</span>
                           </div>
-                          <div className="buyability-tier-info">
-                            <div className={`buyability-tier-badge ${getBuyabilityTierClass(analysis.buyability_score.tier)}`}>
-                              {analysis.buyability_score.tier}
-                            </div>
-                            <p className="buyability-tier-label">{analysis.buyability_score.tier_label_tr}</p>
+                          <div className={`hero-tier-badge ${getBuyabilityTierClass(analysis.buyability_score.tier)}`}>
+                            {analysis.buyability_score.tier}
                           </div>
-                        </div>
-
-                        <div className="buyability-component-scores">
-                          <div className="component-score-item">
-                            <span className="component-label">Istatistiksel</span>
-                            <div className="component-bar-container">
-                              <div
-                                className="component-bar"
-                                style={{ width: `${analysis.buyability_score.component_scores.statistical || 0}%` }}
-                              ></div>
+                          <div className="hero-component-scores">
+                            <div className="hero-component-item">
+                              <span className="hero-component-label">Istatistiksel</span>
+                              <span className="hero-component-value">{analysis.buyability_score.component_scores.statistical ?? '-'}</span>
                             </div>
-                            <span className="component-value">
-                              {analysis.buyability_score.component_scores.statistical ?? '-'}
-                            </span>
-                          </div>
-                          <div className="component-score-item">
-                            <span className="component-label">Mekanik</span>
-                            <div className="component-bar-container">
-                              <div
-                                className="component-bar"
-                                style={{ width: `${analysis.buyability_score.component_scores.mechanical || 0}%` }}
-                              ></div>
+                            <div className="hero-component-item">
+                              <span className="hero-component-label">Mekanik</span>
+                              <span className="hero-component-value">{analysis.buyability_score.component_scores.mechanical ?? '-'}</span>
                             </div>
-                            <span className="component-value">
-                              {analysis.buyability_score.component_scores.mechanical ?? '-'}
-                            </span>
-                          </div>
-                          <div className="component-score-item">
-                            <span className="component-label">Hasar</span>
-                            <div className="component-bar-container">
-                              <div
-                                className="component-bar"
-                                style={{ width: `${analysis.buyability_score.component_scores.crash || 0}%` }}
-                              ></div>
+                            <div className="hero-component-item">
+                              <span className="hero-component-label">Hasar</span>
+                              <span className="hero-component-value">{analysis.buyability_score.component_scores.crash ?? '-'}</span>
                             </div>
-                            <span className="component-value">
-                              {analysis.buyability_score.component_scores.crash ?? '-'}
-                            </span>
                           </div>
                         </div>
-
-                        <div className="buyability-calculation-details">
-                          <details>
-                            <summary>Hesaplama Detaylari</summary>
-                            <div className="calculation-breakdown">
-                              <p><strong>Agirlikli Ortalama:</strong> {analysis.buyability_score.calculation_breakdown.weighted_average}</p>
-                              <p><strong>Minimum Skor:</strong> {analysis.buyability_score.calculation_breakdown.min_score}</p>
-                              <p><strong>Karisik Skor:</strong> {analysis.buyability_score.calculation_breakdown.blended_score}</p>
-                              <p><strong>Uygulanan Ceza:</strong> -{analysis.buyability_score.calculation_breakdown.penalty_applied}</p>
-                              <p><strong>Uygulanan Bonus:</strong> +{analysis.buyability_score.calculation_breakdown.bonus_applied}</p>
-                              <p className="calculation-formula">{analysis.buyability_score.calculation_summary}</p>
-                            </div>
-                          </details>
+                        {/* Right: Second Car Image */}
+                        <div className="hero-image-side">
+                          {allImages.length > 1 && (
+                            <img
+                              src={allImages[1]}
+                              alt={listingTitle}
+                              className="hero-car-image"
+                              onError={(e) => (e.currentTarget.style.display = 'none')}
+                            />
+                          )}
                         </div>
                       </div>
                     )}
@@ -728,16 +680,6 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onNewCrawl
               </div>
             )}
 
-            {/* İlan Detayları Tab */}
-            {activeTab === 'details' && (
-              <div className="details-section">
-                <h3>İlan Açıklaması</h3>
-                <div className="description-box">
-                  <pre>{listing.aciklama || listing.description || 'Açıklama bulunamadı.'}</pre>
-                </div>
-              </div>
-            )}
-
             {/* Teknik Özellikler Tab */}
             {activeTab === 'specs' && (
               <div className="specs-section">
@@ -832,24 +774,6 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onNewCrawl
               </div>
             )}
 
-            {/* Görseller Tab */}
-            {activeTab === 'images' && (
-              <div className="images-section">
-                <h3>Araç Görselleri ({allImages.length} görsel)</h3>
-                {allImages.length > 0 ? (
-                  <div className="images-grid">
-                    {allImages.slice(0, 12).map((img: string, idx: number) => (
-                      <div key={idx} className="image-item">
-                        <img src={img} alt={`Görsel ${idx + 1}`} onError={(e) => (e.currentTarget.style.display = 'none')} />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p>Görsel bulunamadı.</p>
-                )}
-              </div>
-            )}
-
             {/* HTML/Metadata Tab */}
             {activeTab === 'html' && (
               <div className="html-section">
@@ -924,7 +848,7 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onNewCrawl
           </div>
         </div>
       )}
-    </div>
+      </div>
   );
 };
 

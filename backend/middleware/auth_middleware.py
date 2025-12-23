@@ -18,6 +18,12 @@ PUBLIC_PATHS = [
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         # ----------------------------
+        # CORS PREFLIGHT (OPTIONS) - ALLOW WITHOUT AUTH
+        # ----------------------------
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
+        # ----------------------------
         # DEV MODE (AUTH BYPASS)
         # ----------------------------
         if settings.DEV_MODE:

@@ -4,6 +4,10 @@ import {
   signInWithPopup,
   signOut,
   updateProfile,
+  deleteUser,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+  reauthenticateWithPopup,
 } from "firebase/auth";
 import { auth, googleProvider } from "../lib/firebase";
 
@@ -55,4 +59,51 @@ export const signInWithGoogle = async () => {
 export const logoutUser = async () => {
   await signOut(auth);
   localStorage.removeItem("token");
+};
+
+/**
+ * Delete user account
+ * Requires re-authentication for security
+ */
+export const deleteUserAccount = async (password?: string) => {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error("No user logged in");
+  }
+
+  // Re-authenticate based on provider
+  const providerData = user.providerData[0];
+
+  if (providerData?.providerId === "google.com") {
+    // Re-authenticate with Google
+    await reauthenticateWithPopup(user, googleProvider);
+  } else if (providerData?.providerId === "password" && password && user.email) {
+    // Re-authenticate with email/password
+    const credential = EmailAuthProvider.credential(user.email, password);
+    await reauthenticateWithCredential(user, credential);
+  } else {
+    throw new Error("Unable to verify identity. Please try again.");
+  }
+
+  // Delete the user
+  await deleteUser(user);
+  localStorage.removeItem("token");
+};
+
+/**
+ * Get current user info
+ */
+export const getCurrentUser = () => {
+  return auth.currentUser;
+};
+
+/**
+ * Get user provider type
+ */
+export const getUserProvider = () => {
+  const user = auth.currentUser;
+  if (!user) return null;
+
+  const providerData = user.providerData[0];
+  return providerData?.providerId || null;
 };

@@ -1,18 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
 
 import { useCrawler } from './hooks/useCrawler';
-import type { CrawlRequest } from './api/crawlerApi';
+import type { CrawlRequest, CarListing } from './api/crawlerApi';
 import { logoutUser } from '../services/authService';
 
 import CrawlForm from './components/CrawlForm';
 import LoadingState from './components/LoadingState';
-import ResultDisplay from './components/ResultDisplay';
+import ResultDisplay, { type TabType } from './components/ResultDisplay';
 import ErrorDisplay from './components/ErrorDisplay';
 
-// LOGIN PAGE
+// PAGES
 import Login from './pages/Login';
+import HomePage from './pages/HomePage';
+import ProfilePage from './pages/ProfilePage';
 
 // Protected Route Component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -33,6 +35,18 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function CrawlerPage() {
   const crawler = useCrawler();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<TabType>('analysis');
+
+  // Check if we have a listing from navigation state (from HomePage)
+  useEffect(() => {
+    const state = location.state as { listing?: CarListing } | null;
+    if (state?.listing) {
+      crawler.loadStoredListing(state.listing);
+      // Clear the navigation state to prevent reloading on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, []);
 
   const handleStartCrawl = async (request: CrawlRequest) => {
     await crawler.startCrawl(request);
@@ -40,6 +54,7 @@ function CrawlerPage() {
 
   const handleReset = () => {
     crawler.reset();
+    setActiveTab('analysis');
   };
 
   const handleLogout = async () => {
@@ -47,32 +62,114 @@ function CrawlerPage() {
     navigate('/login');
   };
 
+  const handleGoHome = () => {
+    navigate('/');
+  };
+
+  const showNavTabs = crawler.state === 'completed' && crawler.result;
+
   return (
     <div className="app-container">
-      <header className="app-header">
-        <div className="header-content">
-          <img src="/sitelogo.png" alt="CarVisor Logo" className="header-logo" />
-          <div className="header-text">
-            <h1>CarVisor</h1>
-            <p>See Beyond the Listing</p>
+      <header className={`app-header ${showNavTabs ? 'with-wings' : ''}`}>
+        {/* Left Wing - Navigation */}
+        {showNavTabs && (
+          <div className="header-wing left-wing">
+            <button
+              className={`wing-nav-btn ${activeTab === 'analysis' ? 'active' : ''}`}
+              onClick={() => setActiveTab('analysis')}
+            >
+              Analiz
+            </button>
+            <button
+              className={`wing-nav-btn ${activeTab === 'listing' ? 'active' : ''}`}
+              onClick={() => setActiveTab('listing')}
+            >
+              İlan
+            </button>
+          </div>
+        )}
+
+        {/* Center - Logo & Brand */}
+        <div className="header-center">
+          <div className="header-content">
+            <img src="/sitelogo.png" alt="CarVisor Logo" className="header-logo" />
+            <div className="header-text">
+              <h1>CarVisor</h1>
+              <p>See Beyond the Listing</p>
+            </div>
+          </div>
+          <div className="header-actions">
+            <button className="header-action-button" onClick={handleGoHome} title="Home">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
+              <span className="action-text">Home</span>
+            </button>
+            {crawler.state !== 'idle' && (
+              <button className="header-action-button" onClick={handleReset} title="Start New Crawl">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                <span className="action-text">Start New Crawl</span>
+              </button>
+            )}
+            <button className="header-action-button" onClick={handleLogout} title="Logout">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              <span className="action-text">Logout</span>
+            </button>
           </div>
         </div>
-        <button className="logout-button" onClick={handleLogout} title="Logout">
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
-          </svg>
-        </button>
+
+        {/* Right Wing - Navigation */}
+        {showNavTabs && (
+          <div className="header-wing right-wing">
+            <button
+              className={`wing-nav-btn ${activeTab === 'specs' ? 'active' : ''}`}
+              onClick={() => setActiveTab('specs')}
+            >
+              Teknik
+            </button>
+            <button
+              className={`wing-nav-btn ${activeTab === 'parts' ? 'active' : ''}`}
+              onClick={() => setActiveTab('parts')}
+            >
+              Boyalı
+            </button>
+          </div>
+        )}
       </header>
 
       <main className="app-main">
@@ -88,7 +185,10 @@ function CrawlerPage() {
         )}
 
         {crawler.state === 'completed' && crawler.result && (
-          <ResultDisplay result={crawler.result} onNewCrawl={handleReset} />
+          <ResultDisplay
+            result={crawler.result}
+            activeTab={activeTab}
+          />
         )}
 
         {crawler.state === 'failed' && crawler.error && (
@@ -98,6 +198,28 @@ function CrawlerPage() {
 
       <footer className="app-footer">
         <p>Built with React + FastAPI</p>
+        {showNavTabs && (
+          <button
+            className={`footer-metadata-btn ${activeTab === 'html' ? 'active' : ''}`}
+            onClick={() => setActiveTab('html')}
+            title="HTML/Metadata"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="16 18 22 12 16 6" />
+              <polyline points="8 6 2 12 8 18" />
+            </svg>
+            <span>HTML/Metadata</span>
+          </button>
+        )}
       </footer>
     </div>
   );
@@ -112,7 +234,23 @@ function App() {
           path="/"
           element={
             <ProtectedRoute>
+              <HomePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/crawl"
+          element={
+            <ProtectedRoute>
               <CrawlerPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
             </ProtectedRoute>
           }
         />

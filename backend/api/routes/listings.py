@@ -63,11 +63,13 @@ async def get_listings(
     - **skip**: Number of listings to skip for pagination
     """
     try:
+        logger.info(f"Fetching listings for user_id: {user_id}")
         repo = get_firebase_repo()
         listings = repo.list_listings(
             user_id=user_id,
             limit=limit + skip  # Account for skip
         )
+        logger.info(f"Found {len(listings)} listings for user {user_id}")
 
         # Apply skip
         listings = listings[skip:skip + limit]

@@ -2,6 +2,11 @@
 Main FastAPI Application
 """
 
+import warnings
+# Suppress deprecation warnings from third-party packages
+warnings.filterwarnings("ignore", message="pkg_resources is deprecated")
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="pkg_resources")
+
 import sys
 import os
 import asyncio
