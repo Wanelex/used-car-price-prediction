@@ -464,15 +464,33 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onNewCrawl
                       </div>
                     )}
 
-                    {/* Açıklama */}
-                    {(listing.boyali_degisen?.aciklama || listing.painted_parts?.aciklama) && (
+                    {/* Lokal Boyalı Parçalar */}
+                    {(listing.boyali_degisen?.lokal_boyali || listing.painted_parts?.lokal_boyali) && (
+                      <div className="parts-group">
+                        <h4>Lokal Boyalı Parçalar</h4>
+                        <div className="parts-list">
+                          {(listing.boyali_degisen?.lokal_boyali || listing.painted_parts?.lokal_boyali || []).map((part: string, idx: number) => (
+                            <span key={idx} className="part-tag local-painted">{part}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Raw text fallback - show if no structured arrays but aciklama exists */}
+                    {!listing.boyali_degisen?.boyali && !listing.boyali_degisen?.degisen &&
+                     !listing.painted_parts?.boyali && !listing.painted_parts?.degisen &&
+                     (listing.boyali_degisen?.aciklama || listing.painted_parts?.aciklama) && (
                       <div className="parts-description">
-                        <p>{listing.boyali_degisen?.aciklama || listing.painted_parts?.aciklama}</p>
+                        <h4>Ham Veri</h4>
+                        <pre style={{ whiteSpace: 'pre-wrap', fontSize: '14px' }}>
+                          {listing.boyali_degisen?.aciklama || listing.painted_parts?.aciklama}
+                        </pre>
                       </div>
                     )}
 
                     {!listing.boyali_degisen?.boyali && !listing.boyali_degisen?.degisen &&
-                     !listing.painted_parts?.boyali && !listing.painted_parts?.degisen && (
+                     !listing.painted_parts?.boyali && !listing.painted_parts?.degisen &&
+                     !listing.boyali_degisen?.aciklama && !listing.painted_parts?.aciklama && (
                       <p>Boyalı veya değişen parça bilgisi bulunamadı.</p>
                     )}
                   </div>
@@ -537,6 +555,19 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, onNewCrawl
                     <span className="info-label">Veri Kalitesi</span>
                     <span className="info-value">{listing.data_quality_score ? `${(listing.data_quality_score * 100).toFixed(0)}%` : '-'}</span>
                   </div>
+                </div>
+
+                {/* Debug: Raw Listing Data */}
+                <h3 style={{ marginTop: '24px' }}>Debug: Ham İlan Verisi</h3>
+                <div className="description-box">
+                  <pre style={{ whiteSpace: 'pre-wrap', fontSize: '12px', maxHeight: '400px', overflow: 'auto' }}>
+                    {JSON.stringify({
+                      aciklama: listing.aciklama,
+                      description: listing.description,
+                      boyali_degisen: listing.boyali_degisen,
+                      painted_parts: listing.painted_parts
+                    }, null, 2)}
+                  </pre>
                 </div>
               </div>
             )}

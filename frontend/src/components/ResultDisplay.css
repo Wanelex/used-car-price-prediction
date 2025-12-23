@@ -239,6 +239,12 @@
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
+.part-tag.local-painted {
+  background: rgba(249, 115, 22, 0.15);
+  color: #f97316;
+  border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
 .parts-description {
   background: var(--bg-tertiary);
   padding: 12px;

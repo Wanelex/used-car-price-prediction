@@ -402,15 +402,61 @@ class SahibindenCarParser:
     def extract_description(self) -> Optional[str]:
         """Extract listing description"""
         try:
-            # Look for description div
+            # Method 1: Look for description div by ID
             desc_div = self.soup.find('div', {'id': 'classifiedDescription'})
             if desc_div:
-                return desc_div.get_text(strip=True)
+                # Preserve line breaks by using separator
+                text = desc_div.get_text(separator='\n', strip=True)
+                if text:
+                    return text
 
-            # Alternative class names
+            # Method 2: Alternative class names
             desc = self.soup.find('div', class_='description')
             if desc:
-                return desc.get_text(strip=True)
+                text = desc.get_text(separator='\n', strip=True)
+                if text:
+                    return text
+
+            # Method 3: Look for uiBox containing description
+            ui_boxes = self.soup.find_all('div', class_='uiBox')
+            for box in ui_boxes:
+                header = box.find(['h3', 'h4'])
+                if header and 'açıklama' in header.get_text().lower():
+                    # Found the description box, get the content
+                    content = box.find('div', class_='classifiedContent')
+                    if content:
+                        text = content.get_text(separator='\n', strip=True)
+                        if text:
+                            return text
+                    # Try getting text from the box directly (excluding header)
+                    header.extract()
+                    text = box.get_text(separator='\n', strip=True)
+                    if text:
+                        return text
+
+            # Method 4: Look for pre tag with description
+            pre_tags = self.soup.find_all('pre')
+            for pre in pre_tags:
+                text = pre.get_text(separator='\n', strip=True)
+                # Description is usually longer and contains car-related keywords
+                if text and len(text) > 50:
+                    return text
+
+            # Method 5: Look for any div with description-related class
+            desc_containers = self.soup.find_all('div', class_=lambda x: x and 'description' in x.lower() if x else False)
+            for container in desc_containers:
+                text = container.get_text(separator='\n', strip=True)
+                if text and len(text) > 20:
+                    return text
+
+            # Method 6: Look inside classified detail section
+            detail_section = self.soup.find('div', class_='classifiedDetailBox')
+            if detail_section:
+                desc_elem = detail_section.find('div', class_='uiBoxContainer')
+                if desc_elem:
+                    text = desc_elem.get_text(separator='\n', strip=True)
+                    if text:
+                        return text
 
             return None
         except Exception as e:
@@ -548,38 +594,234 @@ class SahibindenCarParser:
         """
         Extract Boyalı veya Değişen Parça (Painted or Changed Parts) section
         This can include text description and possibly images/visual representation
+
+        Returns dict with:
+            - boyali: list of painted parts
+            - degisen: list of changed parts
+            - aciklama: raw text description
+            - gorseller: list of image URLs
+            - has_visual_diagram: bool if car diagram exists
         """
         try:
             painted_section = {}
+            boyali_parts = []
+            degisen_parts = []
+            lokal_boyali_parts = []
+            all_text_parts = []
 
-            # Find the selected-damage li
-            damage_li = self.soup.find('li', class_='selected-damage')
-            if damage_li:
-                # Get text description
-                text = damage_li.get_text(strip=True)
-                if text:
-                    painted_section['aciklama'] = text
+            # Method 1: Find damage/painted parts container by various selectors
+            damage_containers = []
 
-                # Look for images (visual representation of damaged/painted parts)
-                images = []
-                imgs = damage_li.find_all('img')
+            # Try different selectors for the damage section
+            selectors = [
+                ('li', {'class_': 'selected-damage'}),
+                ('div', {'class_': 'damage-status'}),
+                ('div', {'class_': 'painted-changed'}),
+                ('div', {'class_': lambda x: x and 'damage' in x.lower() if x else False}),
+                ('div', {'class_': lambda x: x and 'paint' in x.lower() if x else False}),
+                ('ul', {'class_': 'damage-list'}),
+            ]
+
+            for tag, attrs in selectors:
+                found = self.soup.find_all(tag, attrs)
+                damage_containers.extend(found)
+
+            # Method 2: Look for sections with "Boyalı", "Değişen", or "Lokal" headers
+            all_headers = self.soup.find_all(['h3', 'h4', 'h5', 'span', 'div', 'strong', 'b'])
+            for header in all_headers:
+                header_text = header.get_text(strip=True).lower()
+                if 'boyalı' in header_text or 'değişen' in header_text or 'degisen' in header_text or 'lokal' in header_text:
+                    # Get the parent container
+                    parent = header.find_parent(['div', 'li', 'ul', 'section'])
+                    if parent and parent not in damage_containers:
+                        damage_containers.append(parent)
+                    # Also add the header's next siblings as they might contain the parts
+                    for sibling in header.find_next_siblings():
+                        if sibling.name in ['ul', 'div', 'span', 'li']:
+                            if sibling not in damage_containers:
+                                damage_containers.append(sibling)
+
+            # Method 3: Search for part names directly in spans/divs
+            part_names = [
+                'Ön Tampon', 'Arka Tampon', 'Motor Kaputu', 'Bagaj Kapağı',
+                'Sağ Ön Kapı', 'Sol Ön Kapı', 'Sağ Arka Kapı', 'Sol Arka Kapı',
+                'Sağ Ön Çamurluk', 'Sol Ön Çamurluk', 'Sağ Arka Çamurluk', 'Sol Arka Çamurluk',
+                'Tavan', 'Sağ Marşpiyel', 'Sol Marşpiyel', 'Ön Panel'
+            ]
+
+            # Find all elements that might contain part information
+            for container in damage_containers:
+                # Extract all text elements within the container
+                text_elements = container.find_all(['span', 'li', 'div', 'p'])
+                for elem in text_elements:
+                    text = elem.get_text(strip=True)
+                    if text and len(text) < 100:  # Part names are short
+                        all_text_parts.append(text)
+
+            # Also search globally for part names if containers didn't yield results
+            if not all_text_parts:
+                for part_name in part_names:
+                    elements = self.soup.find_all(string=lambda s: s and part_name in s if s else False)
+                    for elem in elements:
+                        parent = elem.find_parent(['span', 'li', 'div'])
+                        if parent:
+                            text = parent.get_text(strip=True)
+                            if text and text not in all_text_parts:
+                                all_text_parts.append(text)
+
+            # Method 4: Direct section-based extraction
+            # Look for "Boyalı Parçalar" and "Değişen Parçalar" headers and get their associated parts
+            for header in self.soup.find_all(string=lambda s: s and ('Boyalı Parça' in s or 'boyalı parça' in s.lower()) if s else False):
+                # Skip if this is "Lokal Boyalı"
+                if 'lokal' in header.lower():
+                    continue
+                parent = header.find_parent()
+                if parent:
+                    # Get the container - look for a reasonable parent
+                    container = parent.find_parent(['div', 'ul', 'section'])
+                    if container:
+                        # Only search within this container
+                        for elem in container.find_all(['span', 'div', 'li']):
+                            text = elem.get_text(strip=True)
+                            # Skip if we hit another section header
+                            if 'değişen' in text.lower() or 'orijinal' in text.lower() or 'lokal' in text.lower():
+                                continue
+                            # Only add if it EXACTLY matches a known part name
+                            for part in part_names:
+                                if text == part or text.strip() == part:
+                                    if text not in boyali_parts:
+                                        boyali_parts.append(text)
+                                    break
+
+            for header in self.soup.find_all(string=lambda s: s and ('Değişen Parça' in s or 'değişen parça' in s.lower()) if s else False):
+                parent = header.find_parent()
+                if parent:
+                    # Get the container - look for a reasonable parent
+                    container = parent.find_parent(['div', 'ul', 'section'])
+                    if container:
+                        # Only search within this container
+                        for elem in container.find_all(['span', 'div', 'li']):
+                            text = elem.get_text(strip=True)
+                            # Stop if we hit another section header
+                            if 'boyalı' in text.lower() or 'orijinal' in text.lower():
+                                continue
+                            # Only add if it EXACTLY matches a known part name
+                            for part in part_names:
+                                if text == part or text.strip() == part:
+                                    if text not in degisen_parts:
+                                        degisen_parts.append(text)
+                                    break
+
+            for header in self.soup.find_all(string=lambda s: s and ('Lokal Boyalı' in s or 'lokal boyalı' in s.lower()) if s else False):
+                parent = header.find_parent()
+                if parent:
+                    # Get the container - look for a reasonable parent
+                    container = parent.find_parent(['div', 'ul', 'section'])
+                    if container:
+                        # Only search within this container
+                        for elem in container.find_all(['span', 'div', 'li']):
+                            text = elem.get_text(strip=True)
+                            # Skip if we hit another section header
+                            if ('boyalı' in text.lower() and 'lokal' not in text.lower()) or 'değişen' in text.lower() or 'orijinal' in text.lower():
+                                continue
+                            # Only add if it EXACTLY matches a known part name
+                            for part in part_names:
+                                if text == part or text.strip() == part:
+                                    if text not in lokal_boyali_parts:
+                                        lokal_boyali_parts.append(text)
+                                    break
+
+            # Parse all collected text to categorize parts
+            current_section = None
+            for text in all_text_parts:
+                text_lower = text.lower()
+
+                # Skip headers and labels
+                if any(skip in text_lower for skip in ['parça bilgisi', 'orijinal parçalar', 'hasar kaydı']):
+                    continue
+
+                # Detect section headers - check for various formats
+                # Lokal Boyalı section headers (check first as it contains "boyalı")
+                if any(h in text_lower for h in ['lokal boyalı', 'lokal boyali', 'lokal boya']):
+                    current_section = 'lokal_boyali'
+                    continue
+
+                # Boyalı section headers
+                if any(h in text_lower for h in ['boyalı parça', 'boyali parça', 'boyalı', 'boyanan']):
+                    if 'değişen' not in text_lower and 'degisen' not in text_lower and 'lokal' not in text_lower:
+                        current_section = 'boyali'
+                        continue
+
+                # Değişen section headers
+                if any(h in text_lower for h in ['değişen parça', 'degisen parça', 'değişen', 'degisen', 'değiştirilen']):
+                    current_section = 'degisen'
+                    continue
+
+                # Orijinal section - stop collecting
+                if 'orijinal' in text_lower:
+                    current_section = None
+                    continue
+
+                # Check if this text EXACTLY matches a known part name
+                is_exact_part = any(text.strip() == part or text_lower.strip() == part.lower() for part in part_names)
+
+                if is_exact_part and current_section:
+                    # Clean the text - remove any prefix like "Boyalı:" or "Değişen:"
+                    clean_text = text.strip()
+                    for prefix in ['Boyalı:', 'Değişen:', 'Boyali:', 'Degisen:', 'Lokal Boyalı:', 'Lokal:']:
+                        if clean_text.startswith(prefix):
+                            clean_text = clean_text[len(prefix):].strip()
+
+                    # Skip if it's just a header
+                    if clean_text.lower() in ['boyalı parçalar', 'değişen parçalar', 'orijinal parçalar', 'parçalar', 'lokal boyalı parçalar']:
+                        continue
+
+                    if clean_text and clean_text not in boyali_parts and clean_text not in degisen_parts and clean_text not in lokal_boyali_parts:
+                        if current_section == 'boyali':
+                            boyali_parts.append(clean_text)
+                        elif current_section == 'degisen':
+                            degisen_parts.append(clean_text)
+                        elif current_section == 'lokal_boyali':
+                            lokal_boyali_parts.append(clean_text)
+
+            # Build raw description from containers
+            raw_texts = []
+            for container in damage_containers:
+                text = container.get_text(separator='\n', strip=True)
+                if text and text not in raw_texts:
+                    raw_texts.append(text)
+
+            if raw_texts:
+                painted_section['aciklama'] = '\n'.join(raw_texts)
+
+            # Look for images in damage containers
+            images = []
+            for container in damage_containers:
+                imgs = container.find_all('img')
                 for img in imgs:
                     src = img.get('src') or img.get('data-src')
                     if src and 'http' in src:
                         images.append(src)
 
-                if images:
-                    painted_section['gorseller'] = images
+            if images:
+                painted_section['gorseller'] = images
 
-                # Look for canvas/svg (might be car diagram)
-                canvas = damage_li.find('canvas')
-                svg = damage_li.find('svg')
-                if canvas or svg:
+            # Check for visual diagram
+            for container in damage_containers:
+                if container.find('canvas') or container.find('svg'):
                     painted_section['has_visual_diagram'] = True
+                    break
 
-                return painted_section if painted_section else None
+            # Add parsed lists to result
+            if boyali_parts:
+                painted_section['boyali'] = list(set(boyali_parts))  # Remove duplicates
+            if degisen_parts:
+                painted_section['degisen'] = list(set(degisen_parts))  # Remove duplicates
+            if lokal_boyali_parts:
+                painted_section['lokal_boyali'] = list(set(lokal_boyali_parts))  # Remove duplicates
 
-            return None
+            logger.debug(f"Extracted painted parts: {len(boyali_parts)} boyalı, {len(degisen_parts)} değişen, {len(lokal_boyali_parts)} lokal boyalı")
+            return painted_section if painted_section else None
 
         except Exception as e:
             logger.debug(f"Could not extract painted parts: {str(e)}")
