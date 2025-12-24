@@ -22,6 +22,15 @@ from utils.rate_limiter import rate_limiter
 from config.settings import settings
 
 
+class CloudflareDetectedError(Exception):
+    """
+    Raised when Cloudflare detects and blocks the crawl.
+    This error indicates the site has detected bot behavior and
+    the CAPTCHA cannot be solved automatically.
+    """
+    pass
+
+
 class Crawler:
     """
     Main crawler class with full anti-bot protection
@@ -87,6 +96,7 @@ class Crawler:
         start_time = datetime.utcnow()
         attempt = 0
         last_error = None
+        is_cloudflare_blocked = False
 
         logger.info(f"Starting crawl: {url}")
 
@@ -132,8 +142,24 @@ class Crawler:
                 logger.success(f"Crawl successful: {url} (took {crawl_duration:.2f}s)")
                 return result
 
+            except CloudflareDetectedError as e:
+                last_error = str(e)
+                is_cloudflare_blocked = True
+                logger.warning(f"Cloudflare blocked crawl attempt {attempt}/{max_retries}: {last_error}")
+
+                # For Cloudflare blocks, use longer backoff since the site has detected us
+                if attempt < max_retries:
+                    # Longer wait for Cloudflare: 10, 20, 40 seconds
+                    base_wait = min(10 * (2 ** (attempt - 1)), 60)
+                    jitter = base_wait * 0.25 * (2 * random.random() - 1)
+                    wait_time = base_wait + jitter
+
+                    logger.info(f"Cloudflare detected - waiting {wait_time:.1f}s before retry (attempt {attempt + 1}/{max_retries})...")
+                    await asyncio.sleep(wait_time)
+
             except Exception as e:
                 last_error = str(e)
+                is_cloudflare_blocked = False
                 logger.error(f"Crawl attempt {attempt} failed: {last_error}")
 
                 # Mark proxy as failed if used
@@ -166,6 +192,18 @@ class Crawler:
 
         # All attempts failed
         logger.error(f"All crawl attempts failed for {url}")
+
+        # Return user-friendly error for Cloudflare detection
+        if is_cloudflare_blocked:
+            return {
+                "url": url,
+                "status": "cloudflare_blocked",
+                "error_message": "Listing site detected the crawl, try again.",
+                "error_type": "cloudflare_detection",
+                "timestamp": datetime.utcnow().isoformat(),
+                "retry_count": max_retries
+            }
+
         return {
             "url": url,
             "status": "failed",
@@ -573,6 +611,13 @@ class Crawler:
                     else:
                         logger.warning("CAPTCHA detected but could not identify type or extract sitekey")
                         logger.warning("Check that the CAPTCHA widget has loaded properly")
+
+            # If CAPTCHA was detected but not solved, raise CloudflareDetectedError
+            if captcha_detected and not captcha_solved:
+                logger.error("Cloudflare detected the crawl and blocked access - CAPTCHA could not be bypassed")
+                raise CloudflareDetectedError(
+                    "Listing site detected the crawl. The page is protected by Cloudflare and requires human verification."
+                )
 
             # Extract page content
             page_data = await browser.get_page_content()
