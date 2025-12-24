@@ -225,8 +225,50 @@ export const tr: Translations = {
       painted: 'Boyalı',
       localPainted: 'Lokal Boyalı',
     },
-    // Identity mappings for Turkish (text stays the same)
-    crashScoreTranslations: {} as Record<string, string>,
+    // Identity mappings for Turkish (text stays the same - Turkish source to Turkish display)
+    crashScoreTranslations: {
+      // Verdicts
+      'MUKEMMEL - Hasar gecmisi yok veya minimumdur. Alinabilir.': 'MÜKEMMEL - Hasar geçmişi yok veya minimumdur. Alınabilir.',
+      'IYI - Kucuk kozmetik onarimlar var. Alinabilir.': 'İYİ - Küçük kozmetik onarımlar var. Alınabilir.',
+      'DIKKAT - Belirgin hasar gecmisi var. Detayli inceleme sart.': 'DİKKAT - Belirgin hasar geçmişi var. Detaylı inceleme şart.',
+      'TEHLIKE - Ciddi hasar gecmisi. Alinmasi onerilmez.': 'TEHLİKE - Ciddi hasar geçmişi. Alınması önerilmez.',
+      'KESINLIKLE ALINMAMALI - Arac agir hasarli. Guvenlik riski var.': 'KESİNLİKLE ALINMAMALI - Araç ağır hasarlı. Güvenlik riski var.',
+      // Summaries
+      'Arac neredeyse kusursuz durumda. Boyali veya degisen parca yok ya da cok az.': 'Araç neredeyse kusursuz durumda. Boyalı veya değişen parça yok ya da çok az.',
+      'Aracta kucuk kozmetik onarimlar mevcut ancak yapisal bir sorun gorulmuyor.': 'Araçta küçük kozmetik onarımlar mevcut ancak yapısal bir sorun görülmüyor.',
+      'Aracta belirgin onarim izleri var. Profesyonel ekspertiz onerilir.': 'Araçta belirgin onarım izleri var. Profesyonel ekspertiz önerilir.',
+      'Arac ciddi hasar gecmisine sahip. Yapisal problemler olabilir.': 'Araç ciddi hasar geçmişine sahip. Yapısal problemler olabilir.',
+      'Arac cok agir hasar gecmisine sahip. Guvenlik acisindan tehlikeli olabilir.': 'Araç çok ağır hasar geçmişine sahip. Güvenlik açısından tehlikeli olabilir.',
+      // Risk levels
+      'Minimal Risk': 'Minimal Risk',
+      'Dusuk Risk': 'Düşük Risk',
+      'Orta Risk': 'Orta Risk',
+      'Yuksek Risk': 'Yüksek Risk',
+      'Cok Yuksek Risk': 'Çok Yüksek Risk',
+      'Bilinmiyor': 'Bilinmiyor',
+      // Part advices
+      'Kritik yapisal risk. Takla veya agir kaza ihtimali yuksek. Satin alinmasi kesinlikle onerilmez.': 'Kritik yapısal risk. Takla veya ağır kaza ihtimali yüksek. Satın alınması kesinlikle önerilmez.',
+      'Yuksek risk. Takla veya agir cisim darbesi olabilir. Macun kalinligi ve ic direk hasarini kontrol edin.': 'Yüksek risk. Takla veya ağır cisim darbesi olabilir. Macun kalınlığı ve iç direk hasarını kontrol edin.',
+      'Supheli. Kozmetik (kus piskligi vb.) veya anten onarimi olabilir, ancak dikkatli inceleme gerektirir.': 'Şüpheli. Kozmetik (kuş pisliği vb.) veya anten onarımı olabilir, ancak dikkatli inceleme gerektirir.',
+      'Buyuk on carpisma ihtimali yuksek. Sasi, podya ve havayastiklarini dikkatle kontrol edin. Kaza fotograflari dogrulanmadikca onerilmez.': 'Büyük ön çarpışma ihtimali yüksek. Şasi, podya ve hava yastıklarını dikkatle kontrol edin. Kaza fotoğrafları doğrulanmadıkça önerilmez.',
+      'Muhtemelen on darbe veya tas cizigidir. On panel ve radyator destek sacinda orijinal etiketleri kontrol edin.': 'Muhtemelen ön darbe veya taş çiziğidir. Ön panel ve radyatör destek sacında orijinal etiketleri kontrol edin.',
+      'Kucuk kozmetik rotuş. Genellikle kabul edilebilir, renk uyumunu kontrol edin.': 'Küçük kozmetik rötuş. Genellikle kabul edilebilir, renk uyumunu kontrol edin.',
+      'Onemli arkadan carpismayi gosterir. Bagaj havuzu ve arka sasi panelinde kaynak izlerini kontrol edin.': 'Önemli arkadan çarpışmayı gösterir. Bagaj havuzu ve arka şasi panelinde kaynak izlerini kontrol edin.',
+      'Orta seviye arka darbe. Ic yapi saglam ise genellikle kabul edilebilir.': 'Orta seviye arka darbe. İç yapı sağlam ise genellikle kabul edilebilir.',
+      'Kucuk kozmetik onarim. Arac degerine etkisi dusuk.': 'Küçük kozmetik onarım. Araç değerine etkisi düşük.',
+      'Yapisal mudahale kesme ve kaynak gerektirmis. Yuksek deger kaybi. Ic camurluk boslugunu dikkatle kontrol edin.': 'Yapısal müdahale kesme ve kaynak gerektirmiş. Yüksek değer kaybı. İç çamurluk boşluğunu dikkatle kontrol edin.',
+      'Yaygin surtunen bolge. Derin macun kullanilmamissa kabul edilebilir.': 'Yaygın sürtünen bölge. Derin macun kullanılmamışsa kabul edilebilir.',
+      'Kucuk suruntme onarimi. Cok yaygin ve genellikle kabul edilebilir.': 'Küçük sürtünme onarımı. Çok yaygın ve genellikle kabul edilebilir.',
+      'Parcalar civatayla takilir, ancak degisim sert yan darbe anlamina gelir. Direkleri ve mentesteleri kontrol edin.': 'Parçalar civatayla takılır, ancak değişim sert yan darbe anlamına gelir. Direkleri ve menteşeleri kontrol edin.',
+      'Kozmetik cizik veya gocuk onarimi. Sehir trafiginde yaygin. Mekanik sagliga etkisi minimal.': 'Kozmetik çizik veya göçük onarımı. Şehir trafiğinde yaygın. Mekanik sağlığa etkisi minimal.',
+      'Cok kucuk rotuş. Degere etkisi ihmal edilebilir.': 'Çok küçük rötuş. Değere etkisi ihmal edilebilir.',
+      'Plastik parca. Degisim yaygindir ve daha temiz bir gorunum saglar. Sensorleri ve sis farlarini kontrol edin.': 'Plastik parça. Değişim yaygındır ve daha temiz bir görünüm sağlar. Sensörleri ve sis farlarını kontrol edin.',
+      'Plastik parca. Estetik icin boyanir. Degere olumsuz etkisi yoktur.': 'Plastik parça. Estetik için boyanır. Değere olumsuz etkisi yoktur.',
+      'Plastik parca. Onemsiz kozmetik onarim.': 'Plastik parça. Önemsiz kozmetik onarım.',
+      // No parts info messages
+      'Boyali veya degisen parca bilgisi mevcut degil. Arac orijinal durumda kabul edildi.': 'Boyalı veya değişen parça bilgisi mevcut değil. Araç orijinal durumda kabul edildi.',
+      'Parca bilgisi yok - Orijinal kabul edildi': 'Parça bilgisi yok - Orijinal kabul edildi',
+    },
   },
 
   // Result display - Listing section

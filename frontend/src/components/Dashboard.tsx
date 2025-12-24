@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { CarListing } from '../api/listingsApi';
+import { useState } from 'react';
+import { type CarListing } from '../api/crawlerApi';
 import ListingCard from './ListingCard';
 import ListingDetail from './ListingDetail';
 import '../styles/Dashboard.css';
@@ -135,7 +135,7 @@ export default function Dashboard({
           listing={selectedListing}
           onClose={() => setSelectedListing(null)}
           onDelete={async () => {
-            const success = await onDeleteListing(selectedListing.id);
+            const success = await onDeleteListing(selectedListing.id || selectedListing.listing_id);
             if (success) {
               setSelectedListing(null);
             }

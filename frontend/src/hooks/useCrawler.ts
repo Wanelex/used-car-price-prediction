@@ -69,8 +69,8 @@ export const useCrawler = () => {
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
 
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<Date | null>(null);
 
   // Start crawl
@@ -87,7 +87,7 @@ export const useCrawler = () => {
       // Start crawl job
       const response = await crawlerApi.startCrawl(request);
       setJobId(response.job_id);
-      setStatusMessage(response.message);
+      setStatusMessage(response.message || 'Processing...');
 
       // Start polling for status
       startPolling(response.job_id);

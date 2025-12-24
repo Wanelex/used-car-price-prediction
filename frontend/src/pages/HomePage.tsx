@@ -12,7 +12,7 @@ export default function HomePage() {
   const [listings, setListings] = useState<CarListing[]>([]);
   const [filteredListings, setFilteredListings] = useState<CarListing[]>([]);
   const [loading, setLoading] = useState(true);
-  const [authReady, setAuthReady] = useState(false);
+  const [_authReady, setAuthReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);

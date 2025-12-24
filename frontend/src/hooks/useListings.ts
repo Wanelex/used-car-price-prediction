@@ -1,13 +1,13 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
+import { type CarListing } from '../api/crawlerApi';
 import {
-  type CarListing,
-  type SearchFilters,
   getListings,
-  getListingById,
   deleteListing as deleteListingApi,
   getStats,
   searchListings as searchListingsApi,
 } from '../api/listingsApi';
+
+type SearchFilters = Record<string, any>;
 
 interface Stats {
   total_listings: number;
@@ -35,7 +35,7 @@ interface UseListingsReturn {
   reset: () => void;
 }
 
-export function useListings(userId: string | null): UseListingsReturn {
+export function useListings(_userId: string | null): UseListingsReturn {
   const [listings, setListings] = useState<CarListing[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(false);
@@ -43,15 +43,10 @@ export function useListings(userId: string | null): UseListingsReturn {
 
   const loadListings = useCallback(
     async (limit: number = 50) => {
-      if (!userId) {
-        setError('No user ID provided');
-        return;
-      }
-
       setLoading(true);
       setError(null);
       try {
-        const response = await getListings(userId, limit);
+        const response = await getListings(limit);
         setListings(response.data);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load listings';
@@ -61,19 +56,14 @@ export function useListings(userId: string | null): UseListingsReturn {
         setLoading(false);
       }
     },
-    [userId]
+    []
   );
 
   const loadStats = useCallback(async () => {
-    if (!userId) {
-      setError('No user ID provided');
-      return;
-    }
-
     setLoading(true);
     setError(null);
     try {
-      const response = await getStats(userId);
+      const response = await getStats();
       setStats(response.data);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load stats';
@@ -82,20 +72,15 @@ export function useListings(userId: string | null): UseListingsReturn {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, []);
 
   const deleteListing = useCallback(
     async (listingId: string): Promise<boolean> => {
-      if (!userId) {
-        setError('No user ID provided');
-        return false;
-      }
-
       setLoading(true);
       setError(null);
       try {
-        await deleteListingApi(userId, listingId);
-        setListings(listings.filter(l => l.id !== listingId));
+        await deleteListingApi(listingId);
+        setListings(prev => prev.filter(l => l.id !== listingId));
         return true;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to delete listing';
@@ -106,20 +91,15 @@ export function useListings(userId: string | null): UseListingsReturn {
         setLoading(false);
       }
     },
-    [userId, listings]
+    []
   );
 
   const searchListings = useCallback(
     async (filters: SearchFilters) => {
-      if (!userId) {
-        setError('No user ID provided');
-        return;
-      }
-
       setLoading(true);
       setError(null);
       try {
-        const response = await searchListingsApi(userId, filters);
+        const response = await searchListingsApi(filters);
         setListings(response.data);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to search listings';
@@ -129,7 +109,7 @@ export function useListings(userId: string | null): UseListingsReturn {
         setLoading(false);
       }
     },
-    [userId]
+    []
   );
 
   const reset = useCallback(() => {

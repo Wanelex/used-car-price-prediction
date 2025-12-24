@@ -79,6 +79,7 @@ export interface CrawlResult {
   url: string;
   status: JobStatus;
   data?: any;
+  result?: any;
 }
 
 /**
@@ -156,6 +157,7 @@ export async function getCrawlResult(jobId: string): Promise<CrawlResult> {
 export interface CarListing {
   id?: string;
   listing_id: string;
+  user_id?: string;
   brand?: string;
   series?: string;
   model?: string;
@@ -177,7 +179,14 @@ export interface CarListing {
   painted_parts?: Record<string, any>;
   crawled_at?: string;
   data_quality_score?: number;
-  images?: Array<string | { url: string; is_primary?: boolean }>;
+  images?: Array<string | { url: string; is_primary?: boolean; path?: string }>;
+  listing_date?: string;
+  vehicle_condition?: string;
+  warranty?: string;
+  heavy_damage?: boolean;
+  plate_origin?: string;
+  trade_option?: boolean;
+  features?: Record<string, string[]>;
 }
 
 /**

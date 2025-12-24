@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { CarListing, BuyabilityAnalysis, analyzeListing } from '../api/listingsApi';
+import { useState, useEffect } from 'react';
+import { type CarListing } from '../api/crawlerApi';
+import { type BuyabilityAnalysis, analyzeListing } from '../api/listingsApi';
 import '../styles/ListingDetail.css';
 
 interface ListingDetailProps {
@@ -23,7 +24,7 @@ export default function ListingDetail({ listing, onClose, onDelete }: ListingDet
       try {
         setAnalysisLoading(true);
         setAnalysisError(null);
-        const result = await analyzeListing(listing.user_id, listing.listing_id);
+        const result = await analyzeListing(listing.listing_id);
         setAnalysis(result.analysis);
       } catch (err: any) {
         console.error('Failed to fetch analysis:', err);
@@ -34,7 +35,7 @@ export default function ListingDetail({ listing, onClose, onDelete }: ListingDet
     };
 
     fetchAnalysis();
-  }, [listing.listing_id, listing.user_id]);
+  }, [listing.listing_id]);
 
   const handleDelete = async () => {
     if (!window.confirm('Bu ilanı silmek istediğinizden emin misiniz?')) {
@@ -54,7 +55,7 @@ export default function ListingDetail({ listing, onClose, onDelete }: ListingDet
     currency: 'TRY',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(listing.price);
+  }).format(listing.price || 0);
 
   // Format mileage
   const formattedMileage = new Intl.NumberFormat('tr-TR').format(listing.mileage || 0);
@@ -65,7 +66,11 @@ export default function ListingDetail({ listing, onClose, onDelete }: ListingDet
   // Get first image
   const firstImage = listing.images?.[0];
   const imageUrl = firstImage
-    ? `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/data/images/${firstImage.path}`
+    ? typeof firstImage === 'string'
+      ? firstImage
+      : firstImage.path
+        ? `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/data/images/${firstImage.path}`
+        : firstImage.url
     : null;
 
   // Get risk level class based on score
@@ -357,7 +362,7 @@ export default function ListingDetail({ listing, onClose, onDelete }: ListingDet
                     {Object.entries(listing.technical_specs).map(([key, value]) => (
                       <div key={key} className="info-row">
                         <span className="info-label">{key}</span>
-                        <span className="info-value">{value || '-'}</span>
+                        <span className="info-value">{String(value) || '-'}</span>
                       </div>
                     ))}
                   </div>
@@ -375,7 +380,7 @@ export default function ListingDetail({ listing, onClose, onDelete }: ListingDet
                       <div className="parts-group">
                         <h4>Boyali Parcalar</h4>
                         <div className="parts-list">
-                          {listing.painted_parts.boyali.map((part, idx) => (
+                          {listing.painted_parts.boyali.map((part: string, idx: number) => (
                             <span key={idx} className="part-tag painted">{part}</span>
                           ))}
                         </div>
@@ -385,7 +390,7 @@ export default function ListingDetail({ listing, onClose, onDelete }: ListingDet
                       <div className="parts-group">
                         <h4>Degisen Parcalar</h4>
                         <div className="parts-list">
-                          {listing.painted_parts.degisen.map((part, idx) => (
+                          {listing.painted_parts.degisen.map((part: string, idx: number) => (
                             <span key={idx} className="part-tag changed">{part}</span>
                           ))}
                         </div>

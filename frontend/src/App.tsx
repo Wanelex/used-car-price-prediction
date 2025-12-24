@@ -14,7 +14,7 @@ import ErrorDisplay from './components/ErrorDisplay';
 import LanguageToggle from './components/LanguageToggle';
 
 // PAGES
-import Login from './pages/Login';
+import Login from './pages/login';
 import HomePage from './pages/HomePage';
 import ProfilePage from './pages/ProfilePage';
 

@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { CarListing } from '../api/listingsApi';
+import { useMemo } from 'react';
+import { type CarListing } from '../api/crawlerApi';
 import '../styles/ListingCard.css';
 
 interface ListingCardProps {
@@ -76,7 +76,7 @@ export default function ListingCard({ listing, onClick }: ListingCardProps) {
     currency: 'TRY',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(listing.price);
+  }).format(listing.price || 0);
 
   // Format mileage
   const formattedMileage = new Intl.NumberFormat('tr-TR').format(listing.mileage || 0);
@@ -85,8 +85,13 @@ export default function ListingCard({ listing, onClick }: ListingCardProps) {
   const title = `${listing.brand || ''} ${listing.series || ''} ${listing.model || ''}`.trim() || 'Bilinmeyen Araç';
 
   // Get first image URL if available
-  const imageUrl = listing.images && listing.images.length > 0
-    ? `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/data/images/${listing.images[0].path}`
+  const firstImage = listing.images?.[0];
+  const imageUrl = firstImage
+    ? typeof firstImage === 'string'
+      ? firstImage
+      : firstImage.path
+        ? `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/data/images/${firstImage.path}`
+        : firstImage.url
     : null;
 
   return (
