@@ -806,6 +806,27 @@ h3 {
   border-radius: var(--radius-xl);
   padding: 20px;
   backdrop-filter: blur(10px);
+  max-height: 850px;
+  overflow-y: auto;
+}
+
+/* Custom scrollbar for analysis columns */
+.analysis-column::-webkit-scrollbar {
+  width: 6px;
+}
+
+.analysis-column::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+}
+
+.analysis-column::-webkit-scrollbar-thumb {
+  background: var(--border-glass-light);
+  border-radius: 3px;
+}
+
+.analysis-column::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }
 
 .statistical-column {

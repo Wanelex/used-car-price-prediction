@@ -59,13 +59,16 @@ def parse_int(value: Any) -> Optional[int]:
     return None
 
 
-async def perform_analysis_on_listing(sahibinden_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+async def perform_analysis_on_listing(sahibinden_data: Dict[str, Any], language: str = "en") -> Optional[Dict[str, Any]]:
     """Perform hybrid analysis on listing data (statistical + LLM + crash score)"""
     try:
         from api.services.llm_service import llm_analyzer
         from api.services.crash_score_service import calculate_crash_score, crash_score_to_dict
         from api.services.buyability_score_service import calculate_buyability_score, buyability_score_to_dict
         from src.predict_buyability import predict_buyability
+
+        # Validate language
+        lang = language if language in ("en", "tr") else "en"
 
         year = parse_int(sahibinden_data.get('yil'))
         mileage = parse_int(sahibinden_data.get('km'))
@@ -120,20 +123,31 @@ async def perform_analysis_on_listing(sahibinden_data: Dict[str, Any]) -> Option
                 crash_result = calculate_crash_score(
                     painted_parts=parsed_painted,
                     changed_parts=parsed_changed,
-                    local_painted_parts=parsed_local_painted
+                    local_painted_parts=parsed_local_painted,
+                    language=lang
                 )
                 crash_score_result = crash_score_to_dict(crash_result)
             except Exception as crash_error:
                 logger.warning(f"Crash score calculation failed: {crash_error}")
         else:
-            crash_score_result = {
-                "score": 100,
-                "total_deduction": 0,
-                "deductions": [],
-                "summary": "Boyali veya degisen parca bilgisi mevcut degil. Arac orijinal durumda kabul edildi.",
-                "risk_level": "Bilinmiyor",
-                "verdict": "Parca bilgisi yok - Orijinal kabul edildi"
-            }
+            if lang == "tr":
+                crash_score_result = {
+                    "score": 100,
+                    "total_deduction": 0,
+                    "deductions": [],
+                    "summary": "Boyali veya degisen parca bilgisi mevcut degil. Arac orijinal durumda kabul edildi.",
+                    "risk_level": "Bilinmiyor",
+                    "verdict": "Parca bilgisi yok - Orijinal kabul edildi"
+                }
+            else:
+                crash_score_result = {
+                    "score": 100,
+                    "total_deduction": 0,
+                    "deductions": [],
+                    "summary": "No painted or changed parts information available. Vehicle assumed to be in original condition.",
+                    "risk_level": "Unknown",
+                    "verdict": "No parts info - Assumed original"
+                }
 
         # ===== 4. CALCULATE BUYABILITY SCORE =====
         statistical_score = statistical_result.get('risk_score') if statistical_result else None

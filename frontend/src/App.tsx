@@ -5,11 +5,13 @@ import './App.css';
 import { useCrawler } from './hooks/useCrawler';
 import type { CrawlRequest, CarListing } from './api/crawlerApi';
 import { logoutUser } from '../services/authService';
+import { useLanguage } from './i18n';
 
 import CrawlForm from './components/CrawlForm';
 import LoadingState from './components/LoadingState';
 import ResultDisplay, { type TabType } from './components/ResultDisplay';
 import ErrorDisplay from './components/ErrorDisplay';
+import LanguageToggle from './components/LanguageToggle';
 
 // PAGES
 import Login from './pages/Login';
@@ -37,6 +39,7 @@ function CrawlerPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<TabType>('analysis');
+  const { t } = useLanguage();
 
   // Check if we have a listing from navigation state (from HomePage)
   useEffect(() => {
@@ -78,13 +81,13 @@ function CrawlerPage() {
               className={`wing-nav-btn ${activeTab === 'analysis' ? 'active' : ''}`}
               onClick={() => setActiveTab('analysis')}
             >
-              Analiz
+              {t.tabs.analysis}
             </button>
             <button
               className={`wing-nav-btn ${activeTab === 'listing' ? 'active' : ''}`}
               onClick={() => setActiveTab('listing')}
             >
-              İlan
+              {t.tabs.listing}
             </button>
           </div>
         )}
@@ -95,11 +98,12 @@ function CrawlerPage() {
             <img src="/sitelogo.png" alt="CarVisor Logo" className="header-logo" />
             <div className="header-text">
               <h1>CarVisor</h1>
-              <p>See Beyond the Listing</p>
+              <p>{t.brand.tagline}</p>
             </div>
           </div>
           <div className="header-actions">
-            <button className="header-action-button" onClick={handleGoHome} title="Home">
+            <LanguageToggle />
+            <button className="header-action-button" onClick={handleGoHome} title={t.nav.home}>
               <svg
                 width="20"
                 height="20"
@@ -113,10 +117,10 @@ function CrawlerPage() {
                 <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
                 <polyline points="9 22 9 12 15 12 15 22" />
               </svg>
-              <span className="action-text">Home</span>
+              <span className="action-text">{t.nav.home}</span>
             </button>
             {crawler.state !== 'idle' && (
-              <button className="header-action-button" onClick={handleReset} title="Start New Crawl">
+              <button className="header-action-button" onClick={handleReset} title={t.nav.startNewAnalysis}>
                 <svg
                   width="20"
                   height="20"
@@ -130,10 +134,10 @@ function CrawlerPage() {
                   <line x1="12" y1="5" x2="12" y2="19" />
                   <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
-                <span className="action-text">Start New Crawl</span>
+                <span className="action-text">{t.nav.startNewAnalysis}</span>
               </button>
             )}
-            <button className="header-action-button" onClick={handleLogout} title="Logout">
+            <button className="header-action-button" onClick={handleLogout} title={t.nav.logout}>
               <svg
                 width="20"
                 height="20"
@@ -148,7 +152,7 @@ function CrawlerPage() {
                 <polyline points="16 17 21 12 16 7" />
                 <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
-              <span className="action-text">Logout</span>
+              <span className="action-text">{t.nav.logout}</span>
             </button>
           </div>
         </div>
@@ -160,13 +164,13 @@ function CrawlerPage() {
               className={`wing-nav-btn ${activeTab === 'specs' ? 'active' : ''}`}
               onClick={() => setActiveTab('specs')}
             >
-              Teknik
+              {t.tabs.specs}
             </button>
             <button
               className={`wing-nav-btn ${activeTab === 'parts' ? 'active' : ''}`}
               onClick={() => setActiveTab('parts')}
             >
-              Boyalı
+              {t.tabs.parts}
             </button>
           </div>
         )}
@@ -178,7 +182,6 @@ function CrawlerPage() {
         {crawler.state === 'loading' && crawler.jobId && (
           <LoadingState
             url={crawler.result?.url || 'Processing...'}
-            progress={crawler.progress}
             statusMessage={crawler.statusMessage}
             elapsedSeconds={crawler.elapsedSeconds}
           />
@@ -197,12 +200,12 @@ function CrawlerPage() {
       </main>
 
       <footer className="app-footer">
-        <p>Built with React + FastAPI</p>
+        <p>{t.nav.builtWith}</p>
         {showNavTabs && (
           <button
             className={`footer-metadata-btn ${activeTab === 'html' ? 'active' : ''}`}
             onClick={() => setActiveTab('html')}
-            title="HTML/Metadata"
+            title={t.tabs.htmlMetadata}
           >
             <svg
               width="16"
@@ -217,7 +220,7 @@ function CrawlerPage() {
               <polyline points="16 18 22 12 16 6" />
               <polyline points="8 6 2 12 8 18" />
             </svg>
-            <span>HTML/Metadata</span>
+            <span>{t.tabs.htmlMetadata}</span>
           </button>
         )}
       </footer>

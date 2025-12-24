@@ -60,7 +60,7 @@ export default function Dashboard({
 
           <div className="header-buttons">
             <button className="btn btn-primary" onClick={onStartCrawl}>
-              📍 Start New Crawl
+              📍 Start New Analysis
             </button>
             <button className="btn btn-logout" onClick={onLogout}>
               🚪 Logout
@@ -99,9 +99,9 @@ export default function Dashboard({
         <div className="empty-state">
           <div className="empty-state-icon">🚗</div>
           <h2>No Listings Yet</h2>
-          <p>You haven't crawled any car listings yet. Start your first crawl!</p>
+          <p>You haven't analyzed any car listings yet. Start your first analysis!</p>
           <button className="btn btn-primary" onClick={onStartCrawl}>
-            Start Your First Crawl
+            Start Your First Analysis
           </button>
         </div>
       )}

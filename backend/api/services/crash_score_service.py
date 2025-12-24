@@ -5,16 +5,22 @@ Calculates a crash/damage score based on painted (boyali), locally painted (loka
 and changed (degisen) parts. Score starts at 100 (pristine condition) and deducts points
 based on the condition of each part.
 """
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Literal
 from dataclasses import dataclass
 from loguru import logger
+
+Language = Literal["en", "tr"]
 
 
 @dataclass
 class PartConditionConfig:
     """Configuration for a single part condition (changed/painted/local_painted)"""
     deduction: int
-    advice: str
+    advice_tr: str
+    advice_en: str
+
+    def get_advice(self, lang: Language = "en") -> str:
+        return self.advice_tr if lang == "tr" else self.advice_en
 
 
 @dataclass
@@ -34,15 +40,18 @@ PARTS_CONFIG: Dict[str, PartConfig] = {
         name="Tavan",
         changed=PartConditionConfig(
             deduction=60,
-            advice="Kritik yapisal risk. Takla veya agir kaza ihtimali yuksek. Satin alinmasi kesinlikle onerilmez."
+            advice_tr="Kritik yapisal risk. Takla veya agir kaza ihtimali yuksek. Satin alinmasi kesinlikle onerilmez.",
+            advice_en="Critical structural risk. High probability of rollover or severe accident. Purchase strongly not recommended."
         ),
         painted=PartConditionConfig(
             deduction=30,
-            advice="Yuksek risk. Takla veya agir cisim darbesi olabilir. Macun kalinligi ve ic direk hasarini kontrol edin."
+            advice_tr="Yuksek risk. Takla veya agir cisim darbesi olabilir. Macun kalinligi ve ic direk hasarini kontrol edin.",
+            advice_en="High risk. Could indicate rollover or heavy object impact. Check filler thickness and inner pillar damage."
         ),
         local_painted=PartConditionConfig(
             deduction=15,
-            advice="Supheli. Kozmetik (kus piskligi vb.) veya anten onarimi olabilir, ancak dikkatli inceleme gerektirir."
+            advice_tr="Supheli. Kozmetik (kus piskligi vb.) veya anten onarimi olabilir, ancak dikkatli inceleme gerektirir.",
+            advice_en="Suspicious. Could be cosmetic (bird droppings etc.) or antenna repair, but requires careful inspection."
         )
     ),
     # Hood - Motor Kaputu
@@ -50,15 +59,18 @@ PARTS_CONFIG: Dict[str, PartConfig] = {
         name="Motor Kaputu",
         changed=PartConditionConfig(
             deduction=35,
-            advice="Buyuk on carpisma ihtimali yuksek. Sasi, podya ve havayastiklarini dikkatle kontrol edin. Kaza fotograflari dogrulanmadikca onerilmez."
+            advice_tr="Buyuk on carpisma ihtimali yuksek. Sasi, podya ve havayastiklarini dikkatle kontrol edin. Kaza fotograflari dogrulanmadikca onerilmez.",
+            advice_en="High probability of major front collision. Carefully check chassis, subframe, and airbags. Not recommended unless accident photos verified."
         ),
         painted=PartConditionConfig(
             deduction=15,
-            advice="Muhtemelen on darbe veya tas cizigidir. On panel ve radyator destek sacinda orijinal etiketleri kontrol edin."
+            advice_tr="Muhtemelen on darbe veya tas cizigidir. On panel ve radyator destek sacinda orijinal etiketleri kontrol edin.",
+            advice_en="Probably front impact or stone chip. Check front panel and radiator support for original labels."
         ),
         local_painted=PartConditionConfig(
             deduction=8,
-            advice="Kucuk kozmetik rotuş. Genellikle kabul edilebilir, renk uyumunu kontrol edin."
+            advice_tr="Kucuk kozmetik rotuş. Genellikle kabul edilebilir, renk uyumunu kontrol edin.",
+            advice_en="Small cosmetic touch-up. Generally acceptable, check color match."
         )
     ),
     # Trunk Lid - Bagaj Kapagi
@@ -66,15 +78,18 @@ PARTS_CONFIG: Dict[str, PartConfig] = {
         name="Bagaj Kapagi",
         changed=PartConditionConfig(
             deduction=20,
-            advice="Onemli arkadan carpismayi gosterir. Bagaj havuzu ve arka sasi panelinde kaynak izlerini kontrol edin."
+            advice_tr="Onemli arkadan carpismayi gosterir. Bagaj havuzu ve arka sasi panelinde kaynak izlerini kontrol edin.",
+            advice_en="Indicates significant rear collision. Check trunk floor and rear chassis panel for weld marks."
         ),
         painted=PartConditionConfig(
             deduction=10,
-            advice="Orta seviye arka darbe. Ic yapi saglam ise genellikle kabul edilebilir."
+            advice_tr="Orta seviye arka darbe. Ic yapi saglam ise genellikle kabul edilebilir.",
+            advice_en="Medium level rear impact. Generally acceptable if inner structure is intact."
         ),
         local_painted=PartConditionConfig(
             deduction=5,
-            advice="Kucuk kozmetik onarim. Arac degerine etkisi dusuk."
+            advice_tr="Kucuk kozmetik onarim. Arac degerine etkisi dusuk.",
+            advice_en="Small cosmetic repair. Low impact on vehicle value."
         )
     ),
     # Rear Fender - Arka Camurluk
@@ -83,15 +98,18 @@ PARTS_CONFIG: Dict[str, PartConfig] = {
         note="Sol/Sag",
         changed=PartConditionConfig(
             deduction=20,
-            advice="Yapisal mudahale kesme ve kaynak gerektirmis. Yuksek deger kaybi. Ic camurluk boslugunu dikkatle kontrol edin."
+            advice_tr="Yapisal mudahale kesme ve kaynak gerektirmis. Yuksek deger kaybi. Ic camurluk boslugunu dikkatle kontrol edin.",
+            advice_en="Structural intervention required cutting and welding. High value loss. Carefully check inner fender cavity."
         ),
         painted=PartConditionConfig(
             deduction=10,
-            advice="Yaygin surtunen bolge. Derin macun kullanilmamissa kabul edilebilir."
+            advice_tr="Yaygin surtunen bolge. Derin macun kullanilmamissa kabul edilebilir.",
+            advice_en="Common rubbing area. Acceptable if no heavy filler used."
         ),
         local_painted=PartConditionConfig(
             deduction=5,
-            advice="Kucuk suruntme onarimi. Cok yaygin ve genellikle kabul edilebilir."
+            advice_tr="Kucuk suruntme onarimi. Cok yaygin ve genellikle kabul edilebilir.",
+            advice_en="Small scuff repair. Very common and generally acceptable."
         )
     ),
     # Side Parts - Kapilar ve On Camurluklar
@@ -100,15 +118,18 @@ PARTS_CONFIG: Dict[str, PartConfig] = {
         note="On Camurluklar, Tum Kapilar icin kullanin",
         changed=PartConditionConfig(
             deduction=12,
-            advice="Parcalar civatayla takilir, ancak degisim sert yan darbe anlamina gelir. Direkleri ve mentesteleri kontrol edin."
+            advice_tr="Parcalar civatayla takilir, ancak degisim sert yan darbe anlamina gelir. Direkleri ve mentesteleri kontrol edin.",
+            advice_en="Parts are bolt-on, but replacement indicates hard side impact. Check pillars and hinges."
         ),
         painted=PartConditionConfig(
             deduction=6,
-            advice="Kozmetik cizik veya gocuk onarimi. Sehir trafiginde yaygin. Mekanik sagliga etkisi minimal."
+            advice_tr="Kozmetik cizik veya gocuk onarimi. Sehir trafiginde yaygin. Mekanik sagliga etkisi minimal.",
+            advice_en="Cosmetic scratch or dent repair. Common in city traffic. Minimal impact on mechanical health."
         ),
         local_painted=PartConditionConfig(
             deduction=3,
-            advice="Cok kucuk rotuş. Degere etkisi ihmal edilebilir."
+            advice_tr="Cok kucuk rotuş. Degere etkisi ihmal edilebilir.",
+            advice_en="Very small touch-up. Negligible impact on value."
         )
     ),
     # Bumper - Tamponlar
@@ -116,15 +137,18 @@ PARTS_CONFIG: Dict[str, PartConfig] = {
         name="Tamponlar",
         changed=PartConditionConfig(
             deduction=5,
-            advice="Plastik parca. Degisim yaygindir ve daha temiz bir gorunum saglar. Sensorleri ve sis farlarini kontrol edin."
+            advice_tr="Plastik parca. Degisim yaygindir ve daha temiz bir gorunum saglar. Sensorleri ve sis farlarini kontrol edin.",
+            advice_en="Plastic part. Replacement is common and provides cleaner look. Check sensors and fog lights."
         ),
         painted=PartConditionConfig(
             deduction=2,
-            advice="Plastik parca. Estetik icin boyanir. Degere olumsuz etkisi yoktur."
+            advice_tr="Plastik parca. Estetik icin boyanir. Degere olumsuz etkisi yoktur.",
+            advice_en="Plastic part. Painted for aesthetics. No negative impact on value."
         ),
         local_painted=PartConditionConfig(
             deduction=1,
-            advice="Plastik parca. Onemsiz kozmetik onarim."
+            advice_tr="Plastik parca. Onemsiz kozmetik onarim.",
+            advice_en="Plastic part. Insignificant cosmetic repair."
         )
     ),
 }
@@ -214,10 +238,72 @@ class CrashScoreResult:
     verdict: str
 
 
+# Translations for risk levels, verdicts, and summaries
+CRASH_SCORE_TRANSLATIONS = {
+    "en": {
+        "risk_levels": {
+            "minimal": "Minimal Risk",
+            "low": "Low Risk",
+            "medium": "Medium Risk",
+            "high": "High Risk",
+            "very_high": "Very High Risk"
+        },
+        "verdicts": {
+            "excellent": "EXCELLENT - No or minimal damage history. Safe to buy.",
+            "good": "GOOD - Minor cosmetic repairs present. Safe to buy.",
+            "caution": "CAUTION - Noticeable damage history. Detailed inspection required.",
+            "danger": "DANGER - Serious damage history. Purchase not recommended.",
+            "not_buyable": "DO NOT BUY - Vehicle heavily damaged. Safety risk present."
+        },
+        "summaries": {
+            "excellent": "Vehicle is in near-pristine condition. No or very few painted or changed parts.",
+            "good": "Vehicle has minor cosmetic repairs but no structural issues detected.",
+            "caution": "Vehicle has noticeable repair signs. Professional inspection recommended.",
+            "danger": "Vehicle has serious damage history. Structural problems may exist.",
+            "not_buyable": "Vehicle has very severe damage history. May be dangerous for safety."
+        },
+        "unknown_part": {
+            "changed": "Unknown part replacement: {part}. Detailed inspection recommended.",
+            "painted": "Unknown part paint: {part}. Investigate repair history.",
+            "local_painted": "Unknown part local paint: {part}. Could be cosmetic repair."
+        }
+    },
+    "tr": {
+        "risk_levels": {
+            "minimal": "Minimal Risk",
+            "low": "Dusuk Risk",
+            "medium": "Orta Risk",
+            "high": "Yuksek Risk",
+            "very_high": "Cok Yuksek Risk"
+        },
+        "verdicts": {
+            "excellent": "MUKEMMEL - Hasar gecmisi yok veya minimumdur. Alinabilir.",
+            "good": "IYI - Kucuk kozmetik onarimlar var. Alinabilir.",
+            "caution": "DIKKAT - Belirgin hasar gecmisi var. Detayli inceleme sart.",
+            "danger": "TEHLIKE - Ciddi hasar gecmisi. Alinmasi onerilmez.",
+            "not_buyable": "KESINLIKLE ALINMAMALI - Arac agir hasarli. Guvenlik riski var."
+        },
+        "summaries": {
+            "excellent": "Arac neredeyse kusursuz durumda. Boyali veya degisen parca yok ya da cok az.",
+            "good": "Aracta kucuk kozmetik onarimlar mevcut ancak yapisal bir sorun gorulmuyor.",
+            "caution": "Aracta belirgin onarim izleri var. Profesyonel ekspertiz onerilir.",
+            "danger": "Arac ciddi hasar gecmisine sahip. Yapisal problemler olabilir.",
+            "not_buyable": "Arac cok agir hasar gecmisine sahip. Guvenlik acisindan tehlikeli olabilir."
+        },
+        "unknown_part": {
+            "changed": "Bilinmeyen parca degisimi: {part}. Detayli inceleme onerilir.",
+            "painted": "Bilinmeyen parca boyasi: {part}. Onarim gecmisini arastirin.",
+            "local_painted": "Bilinmeyen parca lokal boya: {part}. Kozmetik onarim olabilir."
+        }
+    }
+}
+
+
 def calculate_crash_score(
     painted_parts: Optional[List[str]] = None,
     changed_parts: Optional[List[str]] = None,
-    local_painted_parts: Optional[List[str]] = None
+    local_painted_parts: Optional[List[str]] = None,
+    language: Language = "en"
 ) -> CrashScoreResult:
     """
     Calculate crash score based on damaged/painted/changed parts.
@@ -233,6 +319,7 @@ def calculate_crash_score(
     score = 100
     total_deduction = 0
     deductions: List[PartDeduction] = []
+    translations = CRASH_SCORE_TRANSLATIONS[language]
 
     # Process changed parts (highest severity)
     if changed_parts:
@@ -246,7 +333,7 @@ def calculate_crash_score(
                     part_name=part,
                     condition="degisen",
                     deduction=deduction,
-                    advice=config.changed.advice
+                    advice=config.changed.get_advice(language)
                 ))
             else:
                 # Unknown part, apply default deduction
@@ -256,7 +343,7 @@ def calculate_crash_score(
                     part_name=part,
                     condition="degisen",
                     deduction=default_deduction,
-                    advice=f"Bilinmeyen parca degisimi: {part}. Detayli inceleme onerilir."
+                    advice=translations["unknown_part"]["changed"].format(part=part)
                 ))
                 logger.warning(f"Unknown changed part: {part}")
 
@@ -272,7 +359,7 @@ def calculate_crash_score(
                     part_name=part,
                     condition="boyali",
                     deduction=deduction,
-                    advice=config.painted.advice
+                    advice=config.painted.get_advice(language)
                 ))
             else:
                 # Unknown part, apply default deduction
@@ -282,7 +369,7 @@ def calculate_crash_score(
                     part_name=part,
                     condition="boyali",
                     deduction=default_deduction,
-                    advice=f"Bilinmeyen parca boyasi: {part}. Onarim gecmisini arastirin."
+                    advice=translations["unknown_part"]["painted"].format(part=part)
                 ))
                 logger.warning(f"Unknown painted part: {part}")
 
@@ -298,7 +385,7 @@ def calculate_crash_score(
                     part_name=part,
                     condition="lokal_boyali",
                     deduction=deduction,
-                    advice=config.local_painted.advice
+                    advice=config.local_painted.get_advice(language)
                 ))
             else:
                 # Unknown part, apply default deduction
@@ -308,34 +395,34 @@ def calculate_crash_score(
                     part_name=part,
                     condition="lokal_boyali",
                     deduction=default_deduction,
-                    advice=f"Bilinmeyen parca lokal boya: {part}. Kozmetik onarim olabilir."
+                    advice=translations["unknown_part"]["local_painted"].format(part=part)
                 ))
                 logger.warning(f"Unknown local painted part: {part}")
 
     # Calculate final score (minimum 0)
     score = max(0, 100 - total_deduction)
 
-    # Determine risk level and verdict
+    # Determine risk level and verdict using translations
     if score >= 90:
-        risk_level = "Minimal Risk"
-        verdict = "MUKEMMEL - Hasar gecmisi yok veya minimumdur. Alinabilir."
-        summary = "Arac neredeyse kusursuz durumda. Boyali veya degisen parca yok ya da cok az."
+        risk_level = translations["risk_levels"]["minimal"]
+        verdict = translations["verdicts"]["excellent"]
+        summary = translations["summaries"]["excellent"]
     elif score >= 70:
-        risk_level = "Dusuk Risk"
-        verdict = "IYI - Kucuk kozmetik onarimlar var. Alinabilir."
-        summary = "Aracta kucuk kozmetik onarimlar mevcut ancak yapisal bir sorun gorulmuyor."
+        risk_level = translations["risk_levels"]["low"]
+        verdict = translations["verdicts"]["good"]
+        summary = translations["summaries"]["good"]
     elif score >= 50:
-        risk_level = "Orta Risk"
-        verdict = "DIKKAT - Belirgin hasar gecmisi var. Detayli inceleme sart."
-        summary = "Aracta belirgin onarim izleri var. Profesyonel ekspertiz onerilir."
+        risk_level = translations["risk_levels"]["medium"]
+        verdict = translations["verdicts"]["caution"]
+        summary = translations["summaries"]["caution"]
     elif score >= 25:
-        risk_level = "Yuksek Risk"
-        verdict = "TEHLIKE - Ciddi hasar gecmisi. Alinmasi onerilmez."
-        summary = "Arac ciddi hasar gecmisine sahip. Yapisal problemler olabilir."
+        risk_level = translations["risk_levels"]["high"]
+        verdict = translations["verdicts"]["danger"]
+        summary = translations["summaries"]["danger"]
     else:
-        risk_level = "Cok Yuksek Risk"
-        verdict = "KESINLIKLE ALINMAMALI - Arac agir hasarli. Guvenlik riski var."
-        summary = "Arac cok agir hasar gecmisine sahip. Guvenlik acisindan tehlikeli olabilir."
+        risk_level = translations["risk_levels"]["very_high"]
+        verdict = translations["verdicts"]["not_buyable"]
+        summary = translations["summaries"]["not_buyable"]
 
     return CrashScoreResult(
         score=score,

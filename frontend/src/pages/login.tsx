@@ -5,6 +5,8 @@ import {
   signInWithGoogle,
 } from "../../services/authService";
 import { useNavigate } from "react-router-dom";
+import { useLanguage } from "../i18n";
+import LanguageToggle from "../components/LanguageToggle";
 import "./Login.css";
 
 export default function Login() {
@@ -15,6 +17,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +28,7 @@ export default function Login() {
       let token;
       if (isSignUp) {
         if (!name.trim()) {
-          setError("Please enter your name");
+          setError(t.login.errors.enterName);
           setLoading(false);
           return;
         }
@@ -37,7 +40,7 @@ export default function Login() {
       localStorage.setItem("token", token);
       navigate("/");
     } catch (err: any) {
-      setError(err.message || "Authentication failed");
+      setError(err.message || t.login.errors.authFailed);
     } finally {
       setLoading(false);
     }
@@ -52,7 +55,7 @@ export default function Login() {
       localStorage.setItem("token", token);
       navigate("/");
     } catch (err: any) {
-      setError(err.message || "Google sign-in failed");
+      setError(err.message || t.login.errors.googleFailed);
     } finally {
       setLoading(false);
     }
@@ -68,6 +71,9 @@ export default function Login() {
 
   return (
     <div className="login-container">
+      <div className="login-language-toggle">
+        <LanguageToggle />
+      </div>
       <div className="login-card">
         {/* Logo Section */}
         <div className="login-header">
@@ -76,7 +82,7 @@ export default function Login() {
             <h1>CarVisor</h1>
           </div>
           <p className="subtitle">
-            {isSignUp ? "Create your account" : "Welcome back"}
+            {isSignUp ? t.login.createAccount : t.login.welcomeBack}
           </p>
         </div>
 
@@ -110,12 +116,12 @@ export default function Login() {
               fill="#EA4335"
             />
           </svg>
-          {loading ? "Processing..." : "Continue with Google"}
+          {loading ? t.login.processing : t.login.continueWithGoogle}
         </button>
 
         {/* Divider */}
         <div className="divider">
-          <span>OR</span>
+          <span>{t.login.or}</span>
         </div>
 
         {/* Form */}
@@ -123,7 +129,7 @@ export default function Login() {
           {isSignUp && (
             <input
               type="text"
-              placeholder="Full Name"
+              placeholder={t.login.fullName}
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="form-input"
@@ -133,7 +139,7 @@ export default function Login() {
 
           <input
             type="email"
-            placeholder="Email address"
+            placeholder={t.login.emailAddress}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="form-input"
@@ -143,7 +149,7 @@ export default function Login() {
 
           <input
             type="password"
-            placeholder="Password"
+            placeholder={t.login.password}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="form-input"
@@ -159,17 +165,17 @@ export default function Login() {
             disabled={loading}
           >
             {loading
-              ? "Processing..."
+              ? t.login.processing
               : isSignUp
-                ? "Create Account"
-                : "Sign In"}
+                ? t.login.createAccountBtn
+                : t.login.signIn}
           </button>
         </form>
 
         {/* Mode Toggle */}
         <div className="toggle-section">
           <span className="toggle-text">
-            {isSignUp ? "Already have an account? " : "Don't have an account? "}
+            {isSignUp ? t.login.alreadyHaveAccount + " " : t.login.dontHaveAccount + " "}
           </span>
           <button
             type="button"
@@ -177,7 +183,7 @@ export default function Login() {
             onClick={toggleMode}
             disabled={loading}
           >
-            {isSignUp ? "Sign In" : "Sign Up"}
+            {isSignUp ? t.login.signIn : t.login.signUp}
           </button>
         </div>
       </div>

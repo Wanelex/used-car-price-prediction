@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../i18n';
 
 interface ErrorDisplayProps {
   error: string;
@@ -6,13 +7,15 @@ interface ErrorDisplayProps {
 }
 
 export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, onRetry }) => {
+  const { t } = useLanguage();
+
   return (
     <div className="error-display">
       <div className="error-icon">⚠️</div>
-      <h2>Crawl Failed</h2>
+      <h2>{t.errorDisplay.analysisFailed}</h2>
       <p className="error-message">{error}</p>
       <button className="retry-button" onClick={onRetry}>
-        Try Again
+        {t.common.tryAgain}
       </button>
     </div>
   );

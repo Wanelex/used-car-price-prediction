@@ -8,6 +8,8 @@ import {
   deleteUserAccount,
   getUserProvider,
 } from "../../services/authService";
+import { useLanguage } from "../i18n";
+import LanguageToggle from "../components/LanguageToggle";
 import "./ProfilePage.css";
 
 export default function ProfilePage() {
@@ -18,6 +20,7 @@ export default function ProfilePage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -62,7 +65,7 @@ export default function ProfilePage() {
   };
 
   const formatDate = (dateStr?: string | null) => {
-    if (!dateStr) return "N/A";
+    if (!dateStr) return t.common.na;
     const date = new Date(dateStr);
     return date.toLocaleDateString("tr-TR", {
       day: "numeric",
@@ -73,9 +76,9 @@ export default function ProfilePage() {
 
   const getProviderName = () => {
     const provider = getUserProvider();
-    if (provider === "google.com") return "Google";
-    if (provider === "password") return "Email/Password";
-    return "Unknown";
+    if (provider === "google.com") return t.profile.providers.google;
+    if (provider === "password") return t.profile.providers.emailPassword;
+    return t.profile.providers.unknown;
   };
 
   const isGoogleUser = getUserProvider() === "google.com";
@@ -85,7 +88,7 @@ export default function ProfilePage() {
       <div className="profile-container">
         <div className="loading-container">
           <div className="spinner"></div>
-          <p>Loading profile...</p>
+          <p>{t.profile.loadingProfile}</p>
         </div>
       </div>
     );
@@ -109,7 +112,7 @@ export default function ProfilePage() {
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
               <polyline points="9 22 9 12 15 12 15 22" />
             </svg>
-            History
+            {t.nav.history}
           </button>
         </div>
 
@@ -119,11 +122,12 @@ export default function ProfilePage() {
             <img src="/sitelogo.png" alt="CarVisor Logo" className="header-logo" />
             <div className="header-text">
               <h1>CarVisor</h1>
-              <p>See Beyond the Listing</p>
+              <p>{t.brand.tagline}</p>
             </div>
           </div>
           <div className="header-actions">
-            <button className="header-action-button" onClick={handleNewCrawl} title="Start New Crawl">
+            <LanguageToggle />
+            <button className="header-action-button" onClick={handleNewCrawl} title={t.nav.startNewAnalysis}>
               <svg
                 width="20"
                 height="20"
@@ -137,9 +141,9 @@ export default function ProfilePage() {
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              <span className="action-text">Start New Crawl</span>
+              <span className="action-text">{t.nav.startNewAnalysis}</span>
             </button>
-            <button className="header-action-button" onClick={handleLogout} title="Logout">
+            <button className="header-action-button" onClick={handleLogout} title={t.nav.logout}>
               <svg
                 width="20"
                 height="20"
@@ -154,7 +158,7 @@ export default function ProfilePage() {
                 <polyline points="16 17 21 12 16 7" />
                 <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
-              <span className="action-text">Logout</span>
+              <span className="action-text">{t.nav.logout}</span>
             </button>
           </div>
         </div>
@@ -173,7 +177,7 @@ export default function ProfilePage() {
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
               <circle cx="12" cy="7" r="4" />
             </svg>
-            Profile
+            {t.nav.profile}
           </button>
         </div>
       </header>
@@ -200,7 +204,7 @@ export default function ProfilePage() {
                 </svg>
               </div>
             )}
-            <h2 className="profile-name">{user?.displayName || "User"}</h2>
+            <h2 className="profile-name">{user?.displayName || t.profile.user}</h2>
             <p className="profile-email">{user?.email}</p>
           </div>
 
@@ -221,7 +225,7 @@ export default function ProfilePage() {
                   <line x1="8" y1="2" x2="8" y2="6" />
                   <line x1="3" y1="10" x2="21" y2="10" />
                 </svg>
-                Account Created
+                {t.profile.accountCreated}
               </div>
               <div className="info-value">{formatDate(user?.metadata.creationTime)}</div>
             </div>
@@ -239,7 +243,7 @@ export default function ProfilePage() {
                   <circle cx="12" cy="12" r="10" />
                   <polyline points="12 6 12 12 16 14" />
                 </svg>
-                Last Sign In
+                {t.profile.lastSignIn}
               </div>
               <div className="info-value">{formatDate(user?.metadata.lastSignInTime)}</div>
             </div>
@@ -256,7 +260,7 @@ export default function ProfilePage() {
                 >
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                 </svg>
-                Sign-in Method
+                {t.profile.signInMethod}
               </div>
               <div className="info-value provider-badge">
                 {isGoogleUser && (
@@ -296,18 +300,18 @@ export default function ProfilePage() {
                   <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                   <polyline points="22 4 12 14.01 9 11.01" />
                 </svg>
-                Email Verified
+                {t.profile.emailVerified}
               </div>
               <div className={`info-value ${user?.emailVerified ? "verified" : "not-verified"}`}>
-                {user?.emailVerified ? "Yes" : "No"}
+                {user?.emailVerified ? t.common.yes : t.common.no}
               </div>
             </div>
           </div>
 
           {/* Danger Zone */}
           <div className="danger-zone">
-            <h3>Danger Zone</h3>
-            <p>Once you delete your account, there is no going back. Please be certain.</p>
+            <h3>{t.profile.dangerZone}</h3>
+            <p>{t.profile.deleteWarning}</p>
             <button
               className="delete-account-btn"
               onClick={() => setShowDeleteModal(true)}
@@ -325,7 +329,7 @@ export default function ProfilePage() {
                 <line x1="10" y1="11" x2="10" y2="17" />
                 <line x1="14" y1="11" x2="14" y2="17" />
               </svg>
-              Delete Account
+              {t.profile.deleteAccount}
             </button>
           </div>
         </div>
@@ -350,18 +354,18 @@ export default function ProfilePage() {
                   <line x1="12" y1="16" x2="12.01" y2="16" />
                 </svg>
               </div>
-              <h3>Delete Account</h3>
-              <p>Are you sure you want to delete your account? This action cannot be undone.</p>
+              <h3>{t.profile.deleteAccount}</h3>
+              <p>{t.profile.deleteConfirm}</p>
             </div>
 
             {!isGoogleUser && (
               <div className="modal-input-group">
-                <label>Enter your password to confirm:</label>
+                <label>{t.profile.enterPassword}</label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Your password"
+                  placeholder={t.profile.yourPassword}
                   disabled={deleting}
                 />
               </div>
@@ -369,7 +373,7 @@ export default function ProfilePage() {
 
             {isGoogleUser && (
               <p className="modal-note">
-                You will be prompted to sign in with Google to confirm deletion.
+                {t.profile.googleDeleteNote}
               </p>
             )}
 
@@ -385,14 +389,14 @@ export default function ProfilePage() {
                 }}
                 disabled={deleting}
               >
-                Cancel
+                {t.common.cancel}
               </button>
               <button
                 className="modal-delete-btn"
                 onClick={handleDeleteAccount}
                 disabled={deleting}
               >
-                {deleting ? "Deleting..." : "Delete Account"}
+                {deleting ? t.profile.deleting : t.profile.deleteAccount}
               </button>
             </div>
           </div>
@@ -401,7 +405,7 @@ export default function ProfilePage() {
 
       {/* Footer */}
       <footer className="profile-footer">
-        <p>Built with React + FastAPI</p>
+        <p>{t.nav.builtWith}</p>
       </footer>
     </div>
   );

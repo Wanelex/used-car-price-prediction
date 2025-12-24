@@ -79,7 +79,7 @@ export const useCrawler = () => {
       setState('loading');
       setError(null);
       setProgress(0);
-      setStatusMessage('Starting crawl...');
+      setStatusMessage('Starting analysis...');
       setElapsedSeconds(0);
       setResult(null);
       startTimeRef.current = new Date();
@@ -96,7 +96,7 @@ export const useCrawler = () => {
       startTimer();
     } catch (err: any) {
       setState('failed');
-      setError(err.response?.data?.detail || err.message || 'Failed to start crawl');
+      setError(err.response?.data?.detail || err.message || 'Failed to start analysis');
       stopPolling();
       stopTimer();
     }
@@ -118,7 +118,7 @@ export const useCrawler = () => {
           stopPolling();
           stopTimer();
           setState('failed');
-          setError(status.message || 'Crawl failed');
+          setError(status.message || 'Analysis failed');
         }
       } catch (err: any) {
         console.error('Polling error:', err);
@@ -157,7 +157,7 @@ export const useCrawler = () => {
       setResult(data);
       setState('completed');
       setProgress(100);
-      setStatusMessage('Crawl completed');
+      setStatusMessage('Analysis completed');
     } catch (err: any) {
       setState('failed');
       setError(err.response?.data?.detail || 'Failed to fetch result');

@@ -453,6 +453,9 @@ async def analyze_car_direct(
     painted_parts: Optional[str] = Query(None, description="Comma-separated list of painted (boyali) parts"),
     changed_parts: Optional[str] = Query(None, description="Comma-separated list of changed (degisen) parts"),
     local_painted_parts: Optional[str] = Query(None, description="Comma-separated list of locally painted (lokal boyali) parts"),
+
+    # Language for translations
+    language: Optional[str] = Query("en", description="Language for translations (en or tr)"),
 ):
     """
     Hybrid car buyability analysis combining statistical ML model, LLM expert analysis, and crash score.
@@ -524,6 +527,9 @@ async def analyze_car_direct(
         parsed_changed = [p.strip() for p in changed_parts.split(',')] if changed_parts else None
         parsed_local_painted = [p.strip() for p in local_painted_parts.split(',')] if local_painted_parts else None
 
+        # Validate language parameter
+        lang = language if language in ("en", "tr") else "en"
+
         # Calculate crash score if any parts data is provided
         if parsed_painted or parsed_changed or parsed_local_painted:
             try:
@@ -531,7 +537,8 @@ async def analyze_car_direct(
                 crash_result = calculate_crash_score(
                     painted_parts=parsed_painted,
                     changed_parts=parsed_changed,
-                    local_painted_parts=parsed_local_painted
+                    local_painted_parts=parsed_local_painted,
+                    language=lang
                 )
                 crash_score_result = crash_score_to_dict(crash_result)
             except Exception as crash_error:
@@ -539,14 +546,24 @@ async def analyze_car_direct(
                 # Continue without crash score - graceful degradation
         else:
             # No parts data provided - return perfect score (100)
-            crash_score_result = {
-                "score": 100,
-                "total_deduction": 0,
-                "deductions": [],
-                "summary": "Boyali veya degisen parca bilgisi mevcut degil. Arac orijinal durumda kabul edildi.",
-                "risk_level": "Bilinmiyor",
-                "verdict": "Parca bilgisi yok - Orijinal kabul edildi"
-            }
+            if lang == "tr":
+                crash_score_result = {
+                    "score": 100,
+                    "total_deduction": 0,
+                    "deductions": [],
+                    "summary": "Boyali veya degisen parca bilgisi mevcut degil. Arac orijinal durumda kabul edildi.",
+                    "risk_level": "Bilinmiyor",
+                    "verdict": "Parca bilgisi yok - Orijinal kabul edildi"
+                }
+            else:
+                crash_score_result = {
+                    "score": 100,
+                    "total_deduction": 0,
+                    "deductions": [],
+                    "summary": "No painted or changed parts information available. Vehicle assumed to be in original condition.",
+                    "risk_level": "Unknown",
+                    "verdict": "No parts info - Assumed original"
+                }
 
         # ===== 4. CALCULATE BUYABILITY SCORE =====
         # Extract individual scores for buyability calculation

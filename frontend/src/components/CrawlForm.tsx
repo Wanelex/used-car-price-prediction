@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { CrawlRequest } from '../api/crawlerApi';
+import { useLanguage } from '../i18n';
 
 interface CrawlFormProps {
   onSubmit: (request: CrawlRequest) => void;
@@ -9,6 +10,7 @@ interface CrawlFormProps {
 export const CrawlForm: React.FC<CrawlFormProps> = ({ onSubmit, isLoading = false }) => {
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
+  const { t } = useLanguage();
 
   const validateUrl = (urlString: string): boolean => {
     try {
@@ -24,12 +26,12 @@ export const CrawlForm: React.FC<CrawlFormProps> = ({ onSubmit, isLoading = fals
     setError('');
 
     if (!url.trim()) {
-      setError('URL is required');
+      setError(t.crawlForm.errors.required);
       return;
     }
 
     if (!validateUrl(url)) {
-      setError('Invalid URL. Please enter a valid URL starting with http:// or https://');
+      setError(t.crawlForm.errors.invalid);
       return;
     }
 
@@ -48,16 +50,16 @@ export const CrawlForm: React.FC<CrawlFormProps> = ({ onSubmit, isLoading = fals
 
   return (
     <div className="crawl-form">
-      <h1>Web Crawler</h1>
-      <p className="subtitle">Enter a URL to crawl and extract its content</p>
+      <h1>{t.crawlForm.urlAnalyzer}</h1>
+      <p className="subtitle">{t.crawlForm.enterUrl}</p>
 
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label htmlFor="url">URL to Crawl</label>
+          <label htmlFor="url">{t.crawlForm.urlToAnalyze}</label>
           <input
             id="url"
             type="text"
-            placeholder="https://example.com"
+            placeholder={t.crawlForm.placeholder}
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             disabled={isLoading}
@@ -67,7 +69,7 @@ export const CrawlForm: React.FC<CrawlFormProps> = ({ onSubmit, isLoading = fals
         </div>
 
         <button type="submit" disabled={isLoading} className="submit-button">
-          {isLoading ? 'Crawling...' : 'Start Crawl'}
+          {isLoading ? t.crawlForm.analyzing : t.crawlForm.startAnalysis}
         </button>
       </form>
     </div>

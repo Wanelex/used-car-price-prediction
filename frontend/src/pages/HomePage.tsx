@@ -4,6 +4,8 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../lib/firebase";
 import { getListings, deleteListing, type CarListing } from "../api/crawlerApi";
 import { logoutUser } from "../../services/authService";
+import { useLanguage } from "../i18n";
+import LanguageToggle from "../components/LanguageToggle";
 import "./HomePage.css";
 
 export default function HomePage() {
@@ -27,6 +29,7 @@ export default function HomePage() {
   const [sortBy, setSortBy] = useState<string>('date-desc'); // date-desc, price-asc, price-desc, year-asc, year-desc, mileage-asc, mileage-desc, score-asc, score-desc
 
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   // Wait for Firebase Auth to be ready
   useEffect(() => {
@@ -36,7 +39,7 @@ export default function HomePage() {
         fetchListings();
       } else {
         setLoading(false);
-        setError("Please log in to view your listings");
+        setError(t.home.pleaseLogin);
       }
     });
 
@@ -149,7 +152,7 @@ export default function HomePage() {
   }, [listings, filterBrand, filterMinPrice, filterMaxPrice, filterMinYear, filterMaxYear, filterMinScore, sortBy]);
 
   const formatPrice = (price?: number) => {
-    if (!price) return "N/A";
+    if (!price) return t.common.na;
     return new Intl.NumberFormat("tr-TR", {
       style: "currency",
       currency: "TRY",
@@ -158,12 +161,12 @@ export default function HomePage() {
   };
 
   const formatMileage = (mileage?: number) => {
-    if (!mileage) return "N/A";
+    if (!mileage) return t.common.na;
     return new Intl.NumberFormat("tr-TR").format(mileage) + " km";
   };
 
   const formatDate = (dateStr?: string) => {
-    if (!dateStr) return "N/A";
+    if (!dateStr) return t.common.na;
     const date = new Date(dateStr);
     return date.toLocaleDateString("tr-TR", {
       day: "numeric",
@@ -203,7 +206,7 @@ export default function HomePage() {
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
               <polyline points="9 22 9 12 15 12 15 22" />
             </svg>
-            History
+            {t.nav.history}
           </button>
         </div>
 
@@ -213,11 +216,12 @@ export default function HomePage() {
             <img src="/sitelogo.png" alt="CarVisor Logo" className="header-logo" />
             <div className="header-text">
               <h1>CarVisor</h1>
-              <p>See Beyond the Listing</p>
+              <p>{t.brand.tagline}</p>
             </div>
           </div>
           <div className="header-actions">
-            <button className="header-action-button" onClick={handleNewCrawl} title="Start New Crawl">
+            <LanguageToggle />
+            <button className="header-action-button" onClick={handleNewCrawl} title={t.nav.startNewAnalysis}>
               <svg
                 width="20"
                 height="20"
@@ -231,9 +235,9 @@ export default function HomePage() {
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              <span className="action-text">Start New Crawl</span>
+              <span className="action-text">{t.nav.startNewAnalysis}</span>
             </button>
-            <button className="header-action-button" onClick={handleLogout} title="Logout">
+            <button className="header-action-button" onClick={handleLogout} title={t.nav.logout}>
               <svg
                 width="20"
                 height="20"
@@ -248,7 +252,7 @@ export default function HomePage() {
                 <polyline points="16 17 21 12 16 7" />
                 <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
-              <span className="action-text">Logout</span>
+              <span className="action-text">{t.nav.logout}</span>
             </button>
           </div>
         </div>
@@ -267,7 +271,7 @@ export default function HomePage() {
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
               <circle cx="12" cy="7" r="4" />
             </svg>
-            Profile
+            {t.nav.profile}
           </button>
         </div>
       </header>
@@ -275,22 +279,22 @@ export default function HomePage() {
       {/* Main Content */}
       <main className="home-main">
         <div className="home-title-section">
-          <h2>Analysis History</h2>
-          <p className="subtitle">Your previously analyzed car listings</p>
+          <h2>{t.home.analysisHistory}</h2>
+          <p className="subtitle">{t.home.previouslyAnalyzed}</p>
         </div>
 
         {loading ? (
           <div className="loading-container">
             <div className="spinner"></div>
-            <p>Loading your listings...</p>
+            <p>{t.home.loadingListings}</p>
           </div>
         ) : error ? (
           <div className="error-container">
             <div className="error-icon">!</div>
-            <h3>Error Loading Listings</h3>
+            <h3>{t.home.errorLoading}</h3>
             <p>{error}</p>
             <button onClick={fetchListings} className="retry-button">
-              Try Again
+              {t.common.tryAgain}
             </button>
           </div>
         ) : listings.length === 0 ? (
@@ -311,10 +315,10 @@ export default function HomePage() {
                 <line x1="8" y1="12" x2="16" y2="12" />
               </svg>
             </div>
-            <h3>No Listings Yet</h3>
-            <p>Start analyzing car listings to see them here</p>
+            <h3>{t.home.noListingsYet}</h3>
+            <p>{t.home.startAnalyzing}</p>
             <button onClick={handleNewCrawl} className="start-button">
-              Start New Crawl
+              {t.nav.startNewAnalysis}
             </button>
           </div>
         ) : (
@@ -330,7 +334,7 @@ export default function HomePage() {
                   <line x1="4" y1="12" x2="20" y2="12" />
                   <line x1="4" y1="18" x2="20" y2="18" />
                 </svg>
-                Filters & Sort
+                {t.home.filtersSort}
               </button>
 
               {/* Sort Control */}
@@ -339,16 +343,16 @@ export default function HomePage() {
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
               >
-                <option value="date-desc">Newest First</option>
-                <option value="date-asc">Oldest First</option>
-                <option value="price-asc">Price: Low to High</option>
-                <option value="price-desc">Price: High to Low</option>
-                <option value="year-desc">Year: Newest</option>
-                <option value="year-asc">Year: Oldest</option>
-                <option value="mileage-asc">Mileage: Low to High</option>
-                <option value="mileage-desc">Mileage: High to Low</option>
-                <option value="score-desc">Score: High to Low</option>
-                <option value="score-asc">Score: Low to High</option>
+                <option value="date-desc">{t.home.sortOptions.newestFirst}</option>
+                <option value="date-asc">{t.home.sortOptions.oldestFirst}</option>
+                <option value="price-asc">{t.home.sortOptions.priceLowHigh}</option>
+                <option value="price-desc">{t.home.sortOptions.priceHighLow}</option>
+                <option value="year-desc">{t.home.sortOptions.yearNewest}</option>
+                <option value="year-asc">{t.home.sortOptions.yearOldest}</option>
+                <option value="mileage-asc">{t.home.sortOptions.mileageLowHigh}</option>
+                <option value="mileage-desc">{t.home.sortOptions.mileageHighLow}</option>
+                <option value="score-desc">{t.home.sortOptions.scoreHighLow}</option>
+                <option value="score-asc">{t.home.sortOptions.scoreLowHigh}</option>
               </select>
             </div>
 
@@ -356,10 +360,10 @@ export default function HomePage() {
             {showFilters && (
               <div className="filter-panel">
                 <div className="filter-group">
-                  <label>Brand</label>
+                  <label>{t.home.filters.brand}</label>
                   <input
                     type="text"
-                    placeholder="e.g., BMW, Mercedes"
+                    placeholder={t.home.filters.brandPlaceholder}
                     value={filterBrand}
                     onChange={(e) => setFilterBrand(e.target.value)}
                   />
@@ -367,7 +371,7 @@ export default function HomePage() {
 
                 <div className="filter-row">
                   <div className="filter-group">
-                    <label>Min Price (₺)</label>
+                    <label>{t.home.filters.minPrice}</label>
                     <input
                       type="number"
                       placeholder="Min"
@@ -376,7 +380,7 @@ export default function HomePage() {
                     />
                   </div>
                   <div className="filter-group">
-                    <label>Max Price (₺)</label>
+                    <label>{t.home.filters.maxPrice}</label>
                     <input
                       type="number"
                       placeholder="Max"
@@ -388,7 +392,7 @@ export default function HomePage() {
 
                 <div className="filter-row">
                   <div className="filter-group">
-                    <label>Min Year</label>
+                    <label>{t.home.filters.minYear}</label>
                     <input
                       type="number"
                       placeholder="Min"
@@ -397,7 +401,7 @@ export default function HomePage() {
                     />
                   </div>
                   <div className="filter-group">
-                    <label>Max Year</label>
+                    <label>{t.home.filters.maxYear}</label>
                     <input
                       type="number"
                       placeholder="Max"
@@ -408,10 +412,10 @@ export default function HomePage() {
                 </div>
 
                 <div className="filter-group">
-                  <label>Min Score</label>
+                  <label>{t.home.filters.minScore}</label>
                   <input
                     type="number"
-                    placeholder="0-100"
+                    placeholder={t.home.filters.scorePlaceholder}
                     min="0"
                     max="100"
                     value={filterMinScore ?? ""}
@@ -430,7 +434,7 @@ export default function HomePage() {
                     setFilterMinScore(null);
                   }}
                 >
-                  Clear All Filters
+                  {t.home.filters.clearAll}
                 </button>
               </div>
             )}
@@ -438,12 +442,12 @@ export default function HomePage() {
             {/* Results Count and Listings Grid */}
             {filteredListings.length === 0 ? (
               <div className="no-results">
-                <p>No listings match your filters. Try adjusting your criteria.</p>
+                <p>{t.home.noMatch}</p>
               </div>
             ) : (
               <>
                 <div className="results-info">
-                  Showing {filteredListings.length} of {listings.length} listings
+                  {t.home.showing.replace('{count}', String(filteredListings.length)).replace('{total}', String(listings.length))}
                 </div>
                 <div className="listings-grid">
                   {filteredListings.map((listing) => (
@@ -475,7 +479,7 @@ export default function HomePage() {
                       <span className="quality-score">
                         {Math.round((listing as any).buyability_score.score)}
                       </span>
-                      <span className="quality-label">Final</span>
+                      <span className="quality-label">{t.home.labels.final}</span>
                     </div>
                   ) : listing.data_quality_score ? (
                     <div
@@ -490,7 +494,7 @@ export default function HomePage() {
                       <span className="quality-score">
                         {Math.round(listing.data_quality_score * 100)}
                       </span>
-                      <span className="quality-label">Quality</span>
+                      <span className="quality-label">{t.home.labels.quality}</span>
                     </div>
                   ) : null}
 
@@ -530,7 +534,7 @@ export default function HomePage() {
                           title={`Final Score: Combines Statistical (${(listing as any).statistical_analysis?.risk_score ? Math.round((listing as any).statistical_analysis.risk_score) : '?'}%), Mechanical (${(listing as any).llm_analysis?.scores?.mechanical_score ? Math.round((listing as any).llm_analysis.scores.mechanical_score) : '?'}%), & Crash Analysis (${(listing as any).crash_score_analysis?.score ? Math.round((listing as any).crash_score_analysis.score) : '?'}%)`}
                         >
                           <span className="score-number">{Math.round(score)}</span>
-                          <span className="score-label">Final</span>
+                          <span className="score-label">{t.home.labels.final}</span>
                         </div>
                       );
                     }
@@ -538,7 +542,7 @@ export default function HomePage() {
                     return (
                       <div className="final-score-badge score-pending" title="Analysis pending - Click to analyze">
                         <span className="score-number">—</span>
-                        <span className="score-label">Score</span>
+                        <span className="score-label">{t.home.labels.final}</span>
                       </div>
                     );
                   })()}
@@ -548,16 +552,16 @@ export default function HomePage() {
                   <div className="listing-price">{formatPrice(listing.price)}</div>
                   <div className="listing-info">
                     <div className="info-item">
-                      <span className="info-label">Year:</span> {listing.year || "N/A"}
+                      <span className="info-label">{t.home.labels.year}</span> {listing.year || t.common.na}
                     </div>
                     <div className="info-item">
-                      <span className="info-label">KM:</span> {formatMileage(listing.mileage)}
+                      <span className="info-label">{t.home.labels.km}</span> {formatMileage(listing.mileage)}
                     </div>
                     <div className="info-item">
-                      <span className="info-label">Fuel:</span> {listing.fuel_type || "N/A"}
+                      <span className="info-label">{t.home.labels.fuel}</span> {listing.fuel_type || t.common.na}
                     </div>
                     <div className="info-item">
-                      <span className="info-label">Trans:</span> {listing.transmission || "N/A"}
+                      <span className="info-label">{t.home.labels.trans}</span> {listing.transmission || t.common.na}
                     </div>
                   </div>
                   <div className="listing-footer">
@@ -612,7 +616,7 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="home-footer">
-        <p>Built with React + FastAPI</p>
+        <p>{t.nav.builtWith}</p>
       </footer>
     </div>
   );

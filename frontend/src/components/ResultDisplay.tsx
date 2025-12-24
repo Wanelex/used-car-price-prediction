@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { CrawlResult } from '../api/crawlerApi';
 import { analyzeListing, saveListingAnalysis } from '../api/crawlerApi';
 import type { HybridAnalysis } from '../api/listingsApi';
+import { useLanguage } from '../i18n';
 import './ResultDisplay.css';
 
 export type TabType = 'analysis' | 'listing' | 'specs' | 'parts' | 'html';
@@ -36,6 +37,7 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
   const [analysis, setAnalysis] = useState<HybridAnalysis | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(true);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const { t, language } = useLanguage();
 
   const crawlData = result.result;
   const listing = crawlData?.sahibinden_listing;
@@ -49,9 +51,9 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
         return;
       }
 
-      // Get listing ID for cache key
+      // Get listing ID for cache key (include language for proper translation caching)
       const listingId = listing.ilan_no || listing.listing_id;
-      const cacheKey = listingId ? `analysis_cache_${listingId}` : null;
+      const cacheKey = listingId ? `analysis_cache_${listingId}_${language}` : null;
 
       // Check if analysis results are already in the listing data (from server-side analysis)
       if (crawlData?.analysis) {
@@ -150,6 +152,9 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
           }
         }
 
+        // Add language for translations
+        params.language = language;
+
         // Use authenticated API call
         const data = await analyzeListing(params);
         // Now response contains statistical_analysis and llm_analysis
@@ -193,7 +198,7 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
     };
 
     fetchAnalysis();
-  }, [listing]);
+  }, [listing, language]);
 
   // Get risk level class based on score
   const getRiskLevelClass = (score: number): string => {
@@ -202,13 +207,13 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
     return 'risk-high';
   };
 
-  // Get risk level text in Turkish
+  // Get risk level text
   const getRiskLevelText = (score: number): string => {
-    if (score >= 86) return 'Minimal Risk - Mukemmel Durum';
-    if (score >= 71) return 'Cok Dusuk Risk - Iyi Durum';
-    if (score >= 51) return 'Dusuk Risk - Kabul Edilebilir';
-    if (score >= 31) return 'Orta Risk - Dikkatli Inceleme Onerilir';
-    return 'Yuksek Risk - Ciddi Endiseler Var';
+    if (score >= 86) return t.analysis.riskLevels.minimal;
+    if (score >= 71) return t.analysis.riskLevels.veryLow;
+    if (score >= 51) return t.analysis.riskLevels.low;
+    if (score >= 31) return t.analysis.riskLevels.medium;
+    return t.analysis.riskLevels.high;
   };
 
   // Get mechanical risk level class for LLM score
@@ -218,13 +223,13 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
     return 'risk-high';
   };
 
-  // Get mechanical risk text in Turkish
+  // Get mechanical risk text
   const getMechanicalRiskText = (score: number): string => {
-    if (score >= 86) return 'Efsanevi Guvenilirlik';
-    if (score >= 71) return 'Yuksek Guvenilirlik';
-    if (score >= 51) return 'Orta Guvenilirlik';
-    if (score >= 31) return 'Dusuk Guvenilirlik - Dikkat';
-    return 'Mekanik Risk Yuksek';
+    if (score >= 86) return t.analysis.mechanicalLevels.legendary;
+    if (score >= 71) return t.analysis.mechanicalLevels.high;
+    if (score >= 51) return t.analysis.mechanicalLevels.medium;
+    if (score >= 31) return t.analysis.mechanicalLevels.low;
+    return t.analysis.mechanicalLevels.risk;
   };
 
   // Get crash score risk level class
@@ -236,11 +241,11 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
 
   // Get crash score verdict text based on score
   const getCrashVerdictText = (score: number): string => {
-    if (score >= 90) return 'MUKEMMEL';
-    if (score >= 70) return 'IYI';
-    if (score >= 50) return 'DIKKAT';
-    if (score >= 25) return 'TEHLIKE';
-    return 'ALINMAMALI';
+    if (score >= 90) return t.analysis.crashVerdicts.excellent;
+    if (score >= 70) return t.analysis.crashVerdicts.good;
+    if (score >= 50) return t.analysis.crashVerdicts.caution;
+    if (score >= 25) return t.analysis.crashVerdicts.danger;
+    return t.analysis.crashVerdicts.notBuyable;
   };
 
   // Get buyability tier class for styling
@@ -262,14 +267,25 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
     return 'score-low';
   };
 
-  // Get condition label in Turkish
+  // Get condition label with translation support
   const getConditionLabel = (condition: string): string => {
     switch (condition) {
-      case 'degisen': return 'Degisen';
-      case 'boyali': return 'Boyali';
-      case 'lokal_boyali': return 'Lokal Boyali';
+      case 'degisen': return t.analysis.conditionLabels.changed;
+      case 'boyali': return t.analysis.conditionLabels.painted;
+      case 'lokal_boyali': return t.analysis.conditionLabels.localPainted;
       default: return condition;
     }
+  };
+
+  // Translate crash score text (Turkish -> English when needed)
+  const translateCrashText = (text: string): string => {
+    if (!text) return text;
+    // If English is selected and we have a translation, use it
+    if (language === 'en' && t.analysis.crashScoreTranslations) {
+      const translations = t.analysis.crashScoreTranslations as Record<string, string>;
+      return translations[text] || text;
+    }
+    return text;
   };
 
   // Get condition tag class
@@ -282,20 +298,20 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
     }
   };
 
-  // Translate feature score names to Turkish
+  // Translate feature score names
   const featureScoreLabels: Record<string, string> = {
-    age_score: 'Arac Yasi',
-    km_per_year_score: 'Yillik KM',
-    km_score: 'Toplam KM',
-    year_score: 'Model Yili',
-    hp_score: 'Motor Gucu',
-    ccm_score: 'Motor Hacmi'
+    age_score: t.analysis.featureLabels.carAge,
+    km_per_year_score: t.analysis.featureLabels.annualMileage,
+    km_score: t.analysis.featureLabels.totalMileage,
+    year_score: t.analysis.featureLabels.modelYear,
+    hp_score: t.analysis.featureLabels.enginePower,
+    ccm_score: t.analysis.featureLabels.engineVolume
   };
 
   // Build title from brand, series, model
   const listingTitle = listing
     ? `${listing.marka || listing.brand || ''} ${listing.seri || listing.series || ''} ${listing.model || ''}`.trim() || 'Araç İlanı'
-    : crawlData?.title || 'Crawl Result';
+    : crawlData?.title || 'Analysis Result';
 
   // Get all images from crawl result (this is the reliable source)
   const allImages = crawlData?.images || [];
@@ -319,12 +335,12 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
                 {analysisLoading && (
                   <div className="analysis-loading">
                     <div className="loading-spinner-small"></div>
-                    <span>Analiz yapiliyor...</span>
+                    <span>{t.analysis.analyzing}</span>
                   </div>
                 )}
                 {analysisError && (
                   <div className="analysis-error">
-                    <span>Analiz yapilamadi: {analysisError}</span>
+                    <span>{t.analysis.analysisFailed.replace('{error}', analysisError)}</span>
                   </div>
                 )}
                 {analysis && !analysisLoading && (
@@ -355,15 +371,15 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
                           </div>
                           <div className="hero-component-scores">
                             <div className="hero-component-item">
-                              <span className="hero-component-label">Istatistiksel</span>
+                              <span className="hero-component-label">{t.analysis.componentScores.statistical}</span>
                               <span className="hero-component-value">{analysis.buyability_score.component_scores.statistical ?? '-'}</span>
                             </div>
                             <div className="hero-component-item">
-                              <span className="hero-component-label">Mekanik</span>
+                              <span className="hero-component-label">{t.analysis.componentScores.mechanical}</span>
                               <span className="hero-component-value">{analysis.buyability_score.component_scores.mechanical ?? '-'}</span>
                             </div>
                             <div className="hero-component-item">
-                              <span className="hero-component-label">Hasar</span>
+                              <span className="hero-component-label">{t.analysis.componentScores.crash}</span>
                               <span className="hero-component-value">{analysis.buyability_score.component_scores.crash ?? '-'}</span>
                             </div>
                           </div>
@@ -384,7 +400,7 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
 
                     {/* LEFT COLUMN: Statistical Health Score */}
                     <div className="analysis-column statistical-column">
-                      <h3 className="analysis-column-title">Istatistiksel Saglik Skoru</h3>
+                      <h3 className="analysis-column-title">{t.analysis.statisticalHealthScore}</h3>
 
                       <div className={`risk-score-card ${getRiskLevelClass(analysis.statistical_analysis.risk_score)}`}>
                         <div className="risk-score-main">
@@ -392,14 +408,14 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
                           <span className="risk-score-max">/100</span>
                         </div>
                         <div className="risk-decision">
-                          {analysis.statistical_analysis.decision === 'BUYABLE' ? 'ALINABILIR' : 'ALINMAMALI'}
+                          {analysis.statistical_analysis.decision === 'BUYABLE' ? t.analysis.buyable : t.analysis.notBuyable}
                         </div>
                         <div className="risk-explanation">{getRiskLevelText(analysis.statistical_analysis.risk_score)}</div>
                       </div>
 
                       {/* Feature Scores */}
                       <div className="feature-scores">
-                        <h4>Ozellik Puanlari</h4>
+                        <h4>{t.analysis.featureScores}</h4>
                         <div className="feature-scores-grid">
                           {Object.entries(analysis.statistical_analysis.feature_scores).map(([key, value]) => (
                             <div key={key} className="feature-score-item">
@@ -419,7 +435,7 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
                       {/* Risk Factors */}
                       {analysis.statistical_analysis.risk_factors.length > 0 && (
                         <div className="risk-factors">
-                          <h4>Risk Faktorleri</h4>
+                          <h4>{t.analysis.riskFactors}</h4>
                           <ul className="risk-factors-list">
                             {analysis.statistical_analysis.risk_factors.map((factor, idx) => (
                               <li key={idx} className="risk-factor-item">{factor}</li>
@@ -430,7 +446,7 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
 
                       {/* Top Contributing Features */}
                       <div className="top-features">
-                        <h4>En Onemli Ozellikler</h4>
+                        <h4>{t.analysis.topFeatures}</h4>
                         <div className="top-features-list">
                           {analysis.statistical_analysis.top_features.map((feat, idx) => (
                             <div key={idx} className="top-feature-item">
@@ -445,7 +461,7 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
 
                     {/* RIGHT COLUMN: LLM Mechanical Score */}
                     <div className="analysis-column llm-column">
-                      <h3 className="analysis-column-title">Mekanik Guvenilirlik Skoru</h3>
+                      <h3 className="analysis-column-title">{t.analysis.mechanicalReliabilityScore}</h3>
 
                       {analysis.llm_analysis ? (
                         <>
@@ -462,19 +478,19 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
 
                           {/* Car Identification */}
                           <div className="llm-section">
-                            <h4>Arac Bilesenleri</h4>
+                            <h4>{t.analysis.carComponents}</h4>
                             <div className="llm-info-grid">
                               <div className="llm-info-item">
-                                <span className="llm-label">Motor Kodu:</span>
+                                <span className="llm-label">{t.analysis.engineCode}</span>
                                 <span className="llm-value">{analysis.llm_analysis.car_identification.engine_code}</span>
                               </div>
                               <div className="llm-info-item">
-                                <span className="llm-label">Sanziman:</span>
+                                <span className="llm-label">{t.analysis.transmission}</span>
                                 <span className="llm-value">{analysis.llm_analysis.car_identification.transmission_name}</span>
                               </div>
                               {analysis.llm_analysis.car_identification.generation && (
                                 <div className="llm-info-item">
-                                  <span className="llm-label">Nesil:</span>
+                                  <span className="llm-label">{t.analysis.generation}</span>
                                   <span className="llm-value">{analysis.llm_analysis.car_identification.generation}</span>
                                 </div>
                               )}
@@ -483,51 +499,51 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
 
                           {/* Expert Analysis */}
                           <div className="llm-section">
-                            <h4>Uzman Analizi</h4>
+                            <h4>{t.analysis.expertAnalysis}</h4>
 
                             <div className="llm-analysis-block">
-                              <h5>Genel Degerlendirme</h5>
+                              <h5>{t.analysis.generalEvaluation}</h5>
                               <p>{analysis.llm_analysis.expert_analysis.general_comment}</p>
                             </div>
 
                             <div className="llm-analysis-block">
-                              <h5>Motor Guvenilirligi</h5>
+                              <h5>{t.analysis.engineReliability}</h5>
                               <p>{analysis.llm_analysis.expert_analysis.engine_reliability}</p>
                             </div>
 
                             <div className="llm-analysis-block">
-                              <h5>Sanziman Guvenilirligi</h5>
+                              <h5>{t.analysis.transmissionReliability}</h5>
                               <p>{analysis.llm_analysis.expert_analysis.transmission_reliability}</p>
                             </div>
 
                             <div className="llm-analysis-block">
-                              <h5>KM Dayaniklilik Kontrolu</h5>
+                              <h5>{t.analysis.mileageEndurance}</h5>
                               <p>{analysis.llm_analysis.expert_analysis.km_endurance_check}</p>
                             </div>
                           </div>
 
                           {/* Recommendation */}
                           <div className="llm-section llm-recommendation">
-                            <h4>Uzman Onerisi</h4>
+                            <h4>{t.analysis.expertRecommendation}</h4>
                             <p className="llm-verdict">{analysis.llm_analysis.recommendation.verdict}</p>
                             <p className="llm-score-reasoning">
-                              <strong>Puan Aciklamasi:</strong> {analysis.llm_analysis.scores.reasoning_for_score}
+                              <strong>{t.analysis.scoreReasoning}</strong> {analysis.llm_analysis.scores.reasoning_for_score}
                             </p>
                           </div>
                         </>
                       ) : (
                         <div className="llm-unavailable">
                           <div className="llm-unavailable-icon">⚠️</div>
-                          <h4>LLM Analizi Mevcut Degil</h4>
-                          <p>Mekanik guvenilirlik analizi su anda kullanilamiyor. Lutfen istatistiksel skoru inceleyin.</p>
-                          <p className="llm-unavailable-hint">OpenAI API anahtari yapilandirilmamis veya arac bilgileri eksik olabilir.</p>
+                          <h4>{t.analysis.llmNotAvailable}</h4>
+                          <p>{t.analysis.mechanicalAnalysisUnavailable}</p>
+                          <p className="llm-unavailable-hint">{t.analysis.apiKeyMissing}</p>
                         </div>
                       )}
                     </div>
 
                     {/* THIRD COLUMN: Crash Score */}
                     <div className="analysis-column crash-column">
-                      <h3 className="analysis-column-title">Hasar/Boya Skoru</h3>
+                      <h3 className="analysis-column-title">{t.analysis.damagePaintScore}</h3>
 
                       {analysis.crash_score_analysis ? (
                         <>
@@ -539,25 +555,25 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
                             <div className="risk-decision">
                               {getCrashVerdictText(analysis.crash_score_analysis.score)}
                             </div>
-                            <div className="risk-explanation">{analysis.crash_score_analysis.risk_level}</div>
+                            <div className="risk-explanation">{translateCrashText(analysis.crash_score_analysis.risk_level)}</div>
                           </div>
 
                           {/* Summary */}
                           <div className="crash-section">
-                            <h4>Ozet</h4>
-                            <p className="crash-summary">{analysis.crash_score_analysis.summary}</p>
+                            <h4>{t.analysis.summary}</h4>
+                            <p className="crash-summary">{translateCrashText(analysis.crash_score_analysis.summary)}</p>
                           </div>
 
                           {/* Verdict */}
                           <div className="crash-section crash-verdict-section">
-                            <h4>Degerlendirme</h4>
-                            <p className="crash-verdict">{analysis.crash_score_analysis.verdict}</p>
+                            <h4>{t.analysis.verdict}</h4>
+                            <p className="crash-verdict">{translateCrashText(analysis.crash_score_analysis.verdict)}</p>
                           </div>
 
                           {/* Deductions List */}
                           {analysis.crash_score_analysis.deductions.length > 0 && (
                             <div className="crash-section">
-                              <h4>Parca Detaylari ({analysis.crash_score_analysis.total_deduction} puan dusuldu)</h4>
+                              <h4>{t.analysis.partDetails.replace('{points}', String(analysis.crash_score_analysis.total_deduction))}</h4>
                               <div className="crash-deductions-list">
                                 {analysis.crash_score_analysis.deductions.map((deduction, idx) => (
                                   <div key={idx} className="crash-deduction-item">
@@ -568,7 +584,7 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
                                       </span>
                                       <span className="crash-deduction-points">-{deduction.deduction}</span>
                                     </div>
-                                    <p className="crash-deduction-advice">{deduction.advice}</p>
+                                    <p className="crash-deduction-advice">{translateCrashText(deduction.advice)}</p>
                                   </div>
                                 ))}
                               </div>
@@ -579,16 +595,16 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
                           {analysis.crash_score_analysis.deductions.length === 0 && (
                             <div className="crash-section crash-pristine">
                               <div className="crash-pristine-icon">✓</div>
-                              <h4>Kusursuz Durum</h4>
-                              <p>Bu aracta boyali, lokal boyali veya degisen parca bulunmamaktadir.</p>
+                              <h4>{t.analysis.pristineCondition}</h4>
+                              <p>{t.analysis.noPaintedParts}</p>
                             </div>
                           )}
                         </>
                       ) : (
                         <div className="crash-unavailable">
                           <div className="crash-unavailable-icon">⚠️</div>
-                          <h4>Hasar Skoru Hesaplanamadi</h4>
-                          <p>Boyali/degisen parca bilgisi mevcut degil.</p>
+                          <h4>{t.analysis.damageScoreUnavailable}</h4>
+                          <p>{t.analysis.noPaintedPartsInfo}</p>
                         </div>
                       )}
                     </div>
@@ -614,91 +630,91 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
 
                 <div className="info-table">
                   <div className="info-row">
-                    <span className="info-label">İlan No</span>
+                    <span className="info-label">{t.listing.listingNo}</span>
                     <span className="info-value">{listing.ilan_no || listing.listing_id || '-'}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">İlan Tarihi</span>
+                    <span className="info-label">{t.listing.listingDate}</span>
                     <span className="info-value">{listing.ilan_tarihi || listing.listing_date || '-'}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Fiyat</span>
+                    <span className="info-label">{t.listing.price}</span>
                     <span className="info-value price">{formatPrice(listing.fiyat || listing.price)}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Marka</span>
+                    <span className="info-label">{t.listing.brand}</span>
                     <span className="info-value">{listing.marka || listing.brand || '-'}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Seri</span>
+                    <span className="info-label">{t.listing.series}</span>
                     <span className="info-value">{listing.seri || listing.series || '-'}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Model</span>
+                    <span className="info-label">{t.listing.model}</span>
                     <span className="info-value">{listing.model || '-'}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Yıl</span>
+                    <span className="info-label">{t.listing.year}</span>
                     <span className="info-value">{listing.yil || listing.year || '-'}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Yakıt Tipi</span>
+                    <span className="info-label">{t.listing.fuelType}</span>
                     <span className="info-value">{listing.yakit_tipi || listing.fuel_type || '-'}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Vites</span>
+                    <span className="info-label">{t.listing.transmission}</span>
                     <span className="info-value">{listing.vites || listing.transmission || '-'}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Araç Durumu</span>
+                    <span className="info-label">{t.listing.vehicleCondition}</span>
                     <span className="info-value">{listing.arac_durumu || listing.vehicle_condition || '-'}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">KM</span>
+                    <span className="info-label">{t.listing.mileage}</span>
                     <span className="info-value">{formatMileage(listing.km || listing.mileage)}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Kasa Tipi</span>
+                    <span className="info-label">{t.listing.bodyType}</span>
                     <span className="info-value">{listing.kasa_tipi || listing.body_type || '-'}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Motor Gücü</span>
+                    <span className="info-label">{t.listing.enginePower}</span>
                     <span className="info-value">{listing.motor_gucu || listing.engine_power || '-'}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Motor Hacmi</span>
+                    <span className="info-label">{t.listing.engineVolume}</span>
                     <span className="info-value">{listing.motor_hacmi || listing.engine_volume || '-'}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Çekiş</span>
+                    <span className="info-label">{t.listing.drivetrain}</span>
                     <span className="info-value">{listing.cekis || listing.drive_type || '-'}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Renk</span>
+                    <span className="info-label">{t.listing.color}</span>
                     <span className="info-value">{listing.renk || listing.color || '-'}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Garanti</span>
+                    <span className="info-label">{t.listing.warranty}</span>
                     <span className="info-value">{listing.garanti || listing.warranty || '-'}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Ağır Hasar Kayıtlı</span>
+                    <span className="info-label">{t.listing.severelyDamaged}</span>
                     <span className="info-value">{listing.agir_hasar_kayitli || listing.heavy_damage || '-'}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Plaka / Uyruk</span>
+                    <span className="info-label">{t.listing.plateNationality}</span>
                     <span className="info-value">{listing.plaka_uyruk || listing.plate_origin || '-'}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Kimden</span>
+                    <span className="info-label">{t.listing.sellerType}</span>
                     <span className="info-value">{listing.kimden || listing.seller_type || '-'}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Takas</span>
+                    <span className="info-label">{t.listing.tradeIn}</span>
                     <span className="info-value">{listing.takas || listing.trade_option || '-'}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Konum</span>
+                    <span className="info-label">{t.listing.location}</span>
                     <span className="info-value">{listing.konum || listing.location || '-'}</span>
                   </div>
                 </div>
@@ -708,7 +724,7 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
             {/* Teknik Özellikler Tab */}
             {activeTab === 'specs' && (
               <div className="specs-section">
-                <h3>Teknik Özellikler</h3>
+                <h3>{t.specs.technicalSpecs}</h3>
                 {(listing.teknik_ozellikler || listing.technical_specs) &&
                  Object.keys(listing.teknik_ozellikler || listing.technical_specs || {}).length > 0 ? (
                   <div className="info-table">
@@ -720,11 +736,11 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
                     ))}
                   </div>
                 ) : (
-                  <p>Teknik özellik bilgisi bulunamadı.</p>
+                  <p>{t.specs.noTechnicalSpecs}</p>
                 )}
 
                 {/* Donanım Özellikleri */}
-                <h3 style={{ marginTop: '24px' }}>Donanım Özellikleri</h3>
+                <h3 style={{ marginTop: '24px' }}>{t.specs.equipmentFeatures}</h3>
                 {(listing.ozellikler || listing.features) &&
                  Object.keys(listing.ozellikler || listing.features || {}).length > 0 ? (
                   <div className="features-section">
@@ -740,7 +756,7 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
                     ))}
                   </div>
                 ) : (
-                  <p>Donanım bilgisi bulunamadı.</p>
+                  <p>{t.specs.noEquipment}</p>
                 )}
               </div>
             )}
@@ -748,13 +764,13 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
             {/* Boyalı/Değişen Tab */}
             {activeTab === 'parts' && (
               <div className="parts-section">
-                <h3>Boyalı ve Değişen Parçalar</h3>
+                <h3>{t.parts.paintedAndChanged}</h3>
                 {(listing.boyali_degisen || listing.painted_parts) ? (
                   <div className="parts-container">
                     {/* Boyalı Parçalar */}
                     {(listing.boyali_degisen?.boyali || listing.painted_parts?.boyali) && (
                       <div className="parts-group">
-                        <h4>Boyalı Parçalar</h4>
+                        <h4>{t.parts.paintedParts}</h4>
                         <div className="parts-list">
                           {(listing.boyali_degisen?.boyali || listing.painted_parts?.boyali || []).map((part: string, idx: number) => (
                             <span key={idx} className="part-tag painted">{part}</span>
@@ -766,7 +782,7 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
                     {/* Değişen Parçalar */}
                     {(listing.boyali_degisen?.degisen || listing.painted_parts?.degisen) && (
                       <div className="parts-group">
-                        <h4>Değişen Parçalar</h4>
+                        <h4>{t.parts.changedParts}</h4>
                         <div className="parts-list">
                           {(listing.boyali_degisen?.degisen || listing.painted_parts?.degisen || []).map((part: string, idx: number) => (
                             <span key={idx} className="part-tag changed">{part}</span>
@@ -778,7 +794,7 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
                     {/* Lokal Boyalı Parçalar */}
                     {(listing.boyali_degisen?.lokal_boyali || listing.painted_parts?.lokal_boyali) && (
                       <div className="parts-group">
-                        <h4>Lokal Boyalı Parçalar</h4>
+                        <h4>{t.parts.locallyPainted}</h4>
                         <div className="parts-list">
                           {(listing.boyali_degisen?.lokal_boyali || listing.painted_parts?.lokal_boyali || []).map((part: string, idx: number) => (
                             <span key={idx} className="part-tag local-painted">{part}</span>
@@ -790,11 +806,11 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
                     {/* No parts message - show when no boyalı, lokal boyalı, or değişen parts exist */}
                     {!listing.boyali_degisen?.boyali && !listing.boyali_degisen?.degisen && !listing.boyali_degisen?.lokal_boyali &&
                      !listing.painted_parts?.boyali && !listing.painted_parts?.degisen && !listing.painted_parts?.lokal_boyali && (
-                      <p className="no-parts-message">Boyalı veya değişen parça bulunmamaktadır.</p>
+                      <p className="no-parts-message">{t.parts.noPaintedOrChanged}</p>
                     )}
                   </div>
                 ) : (
-                  <p>Boyalı veya değişen parça bilgisi bulunamadı.</p>
+                  <p>{t.parts.noInfoAvailable}</p>
                 )}
               </div>
             )}
@@ -802,7 +818,7 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
             {/* HTML/Metadata Tab */}
             {activeTab === 'html' && (
               <div className="html-section">
-                <h3>Metadata</h3>
+                <h3>{t.metadata.metadata}</h3>
                 {crawlData?.metadata ? (
                   <div className="metadata-grid">
                     {Object.entries(crawlData.metadata).map(([key, value]) =>
@@ -815,31 +831,31 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
                     )}
                   </div>
                 ) : (
-                  <p>Metadata bulunamadı</p>
+                  <p>{t.metadata.noMetadata}</p>
                 )}
 
-                <h3 style={{ marginTop: '24px' }}>Crawl Bilgisi</h3>
+                <h3 style={{ marginTop: '24px' }}>{t.metadata.analysisInfo}</h3>
                 <div className="info-table">
                   <div className="info-row">
-                    <span className="info-label">URL</span>
+                    <span className="info-label">{t.metadata.url}</span>
                     <span className="info-value">{crawlData?.final_url || result.url}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Süre</span>
+                    <span className="info-label">{t.metadata.duration}</span>
                     <span className="info-value">{crawlData?.crawl_duration?.toFixed(2)}s</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">CAPTCHA Çözüldü</span>
-                    <span className="info-value">{crawlData?.captcha_solved ? 'Evet' : 'Hayır'}</span>
+                    <span className="info-label">{t.metadata.captchaSolved}</span>
+                    <span className="info-value">{crawlData?.captcha_solved ? t.common.yes : t.common.no}</span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Veri Kalitesi</span>
+                    <span className="info-label">{t.metadata.dataQuality}</span>
                     <span className="info-value">{listing.data_quality_score ? `${(listing.data_quality_score * 100).toFixed(0)}%` : '-'}</span>
                   </div>
                 </div>
 
                 {/* Debug: Raw Listing Data */}
-                <h3 style={{ marginTop: '24px' }}>Debug: Ham İlan Verisi</h3>
+                <h3 style={{ marginTop: '24px' }}>{t.metadata.debugRawData}</h3>
                 <div className="description-box">
                   <pre style={{ whiteSpace: 'pre-wrap', fontSize: '12px', maxHeight: '400px', overflow: 'auto' }}>
                     {JSON.stringify({
