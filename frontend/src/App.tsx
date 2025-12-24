@@ -4,7 +4,7 @@ import './App.css';
 
 import { useCrawler } from './hooks/useCrawler';
 import type { CrawlRequest, CarListing } from './api/crawlerApi';
-import { logoutUser } from '../services/authService';
+import { logoutUser } from './services/authService';
 import { useLanguage } from './i18n';
 
 import CrawlForm from './components/CrawlForm';

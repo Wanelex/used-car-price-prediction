@@ -3,7 +3,7 @@ import {
   loginUser,
   signUpUser,
   signInWithGoogle,
-} from "../../services/authService";
+} from "../services/authService";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../i18n";
 import LanguageToggle from "../components/LanguageToggle";

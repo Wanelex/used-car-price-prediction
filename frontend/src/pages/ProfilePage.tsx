@@ -2,12 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import type { User } from "firebase/auth";
-import { auth } from "../../lib/firebase";
+import { auth } from "../lib/firebase";
 import {
   logoutUser,
   deleteUserAccount,
   getUserProvider,
-} from "../../services/authService";
+} from "../services/authService";
 import { useLanguage } from "../i18n";
 import LanguageToggle from "../components/LanguageToggle";
 import "./ProfilePage.css";
