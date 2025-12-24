@@ -450,6 +450,200 @@
   color: #ffffff;
 }
 
+/* Final Score Badge - Top Left (Combined Score from 3 Approaches) */
+.final-score-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 0, 0, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  z-index: 10;
+  min-width: 60px;
+}
+
+.final-score-badge .score-number {
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.final-score-badge .score-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.95;
+  margin-top: 2px;
+}
+
+.final-score-badge.score-high {
+  background: linear-gradient(135deg, rgba(74, 222, 128, 0.95) 0%, rgba(59, 204, 112, 0.95) 100%);
+  border: 2px solid rgba(74, 222, 128, 0.7);
+  color: #052e16;
+  box-shadow: 0 8px 16px rgba(74, 222, 128, 0.3), 0 0 20px rgba(74, 222, 128, 0.2);
+}
+
+.final-score-badge.score-medium {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.95) 0%, rgba(230, 170, 20, 0.95) 100%);
+  border: 2px solid rgba(251, 191, 36, 0.7);
+  color: #422006;
+  box-shadow: 0 8px 16px rgba(251, 191, 36, 0.3), 0 0 20px rgba(251, 191, 36, 0.2);
+}
+
+.final-score-badge.score-low {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.95) 0%, rgba(220, 38, 38, 0.95) 100%);
+  border: 2px solid rgba(239, 68, 68, 0.7);
+  color: #ffffff;
+  box-shadow: 0 8px 16px rgba(239, 68, 68, 0.3), 0 0 20px rgba(239, 68, 68, 0.2);
+}
+
+.final-score-badge.score-pending {
+  background: linear-gradient(135deg, rgba(100, 116, 139, 0.9) 0%, rgba(71, 85, 105, 0.9) 100%);
+  border: 2px solid rgba(148, 163, 184, 0.5);
+  color: #cbd5e1;
+}
+
+/* Hover effect */
+.listing-card:hover .final-score-badge {
+  transform: scale(1.05);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* Filter and Sort Controls */
+.filter-sort-container {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  margin: 1rem;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-primary);
+}
+
+.filter-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.filter-toggle-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-accent);
+}
+
+.sort-select {
+  padding: 0.6rem 1rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.sort-select:hover {
+  border-color: var(--border-accent);
+}
+
+/* Filter Panel */
+.filter-panel {
+  padding: 1.5rem;
+  margin: 0 1rem 1rem 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filter-group label {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.filter-group input {
+  padding: 0.6rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+}
+
+.filter-group input:focus {
+  outline: none;
+  border-color: var(--border-accent);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.clear-filters-btn {
+  grid-column: 1 / -1;
+  padding: 0.6rem 1rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.clear-filters-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+/* Results Info */
+.results-info {
+  padding: 0.8rem 1rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* No Results */
+.no-results {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.no-results p {
+  margin: 0;
+  font-size: 1rem;
+}
+
 .listing-content {
   padding: 1.25rem;
 }

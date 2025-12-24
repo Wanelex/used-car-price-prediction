@@ -36,14 +36,27 @@ function listingToCrawlResult(listing: CarListing): CrawlResult {
     gorseller: normalizedImages,
   };
 
+  // Include analysis results if available (from server-side analysis)
+  const result: any = {
+    sahibinden_listing: sahibindenListing,
+    images: normalizedImages,
+  };
+
+  // Add analysis results from the listing data
+  if ((listing as any).buyability_score || (listing as any).statistical_analysis || (listing as any).llm_analysis || (listing as any).crash_score_analysis) {
+    result.analysis = {
+      buyability_score: (listing as any).buyability_score,
+      statistical_analysis: (listing as any).statistical_analysis,
+      llm_analysis: (listing as any).llm_analysis,
+      crash_score_analysis: (listing as any).crash_score_analysis,
+    };
+  }
+
   return {
     job_id: `stored-${listing.listing_id}`,
     url: `https://www.sahibinden.com/ilan/${listing.listing_id}`,
     status: 'completed',
-    result: {
-      sahibinden_listing: sahibindenListing,
-      images: normalizedImages,
-    },
+    result,
   } as CrawlResult;
 }
 

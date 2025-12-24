@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { CrawlResult } from '../api/crawlerApi';
-import { analyzeListing } from '../api/crawlerApi';
+import { analyzeListing, saveListingAnalysis } from '../api/crawlerApi';
 import type { HybridAnalysis } from '../api/listingsApi';
 import './ResultDisplay.css';
 
@@ -53,7 +53,15 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
       const listingId = listing.ilan_no || listing.listing_id;
       const cacheKey = listingId ? `analysis_cache_${listingId}` : null;
 
-      // Check localStorage cache first
+      // Check if analysis results are already in the listing data (from server-side analysis)
+      if (crawlData?.analysis) {
+        console.log('Using server-side analysis for listing:', listingId);
+        setAnalysis(crawlData.analysis);
+        setAnalysisLoading(false);
+        return;
+      }
+
+      // Check localStorage cache second
       if (cacheKey) {
         try {
           const cached = localStorage.getItem(cacheKey);
@@ -157,6 +165,23 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ result, activeTab 
             console.log('Cached analysis for listing:', listingId);
           } catch (e) {
             console.warn('Failed to cache analysis:', e);
+          }
+        }
+
+        // For old listings loaded from history that don't have analysis in DB yet,
+        // save the analysis to the server so future loads won't re-analyze
+        if (listing && !crawlData?.analysis && listingId && data) {
+          try {
+            console.log('Saving analysis results to server for listing:', listingId);
+            await saveListingAnalysis(listingId, {
+              buyability_score: data.buyability_score,
+              statistical_analysis: data.statistical_analysis,
+              llm_analysis: data.llm_analysis,
+              crash_score_analysis: data.crash_score_analysis
+            });
+            console.log('Successfully saved analysis results to server');
+          } catch (e) {
+            console.warn('Could not save analysis to server:', e);
           }
         }
       } catch (err: any) {

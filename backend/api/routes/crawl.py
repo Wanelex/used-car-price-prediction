@@ -59,7 +59,113 @@ def parse_int(value: Any) -> Optional[int]:
     return None
 
 
-def save_listing_to_firestore(sahibinden_data: Dict[str, Any], user_id: Optional[str], result_images: List[str] = None) -> bool:
+async def perform_analysis_on_listing(sahibinden_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Perform hybrid analysis on listing data (statistical + LLM + crash score)"""
+    try:
+        from api.services.llm_service import llm_analyzer
+        from api.services.crash_score_service import calculate_crash_score, crash_score_to_dict
+        from api.services.buyability_score_service import calculate_buyability_score, buyability_score_to_dict
+        from src.predict_buyability import predict_buyability
+
+        year = parse_int(sahibinden_data.get('yil'))
+        mileage = parse_int(sahibinden_data.get('km'))
+
+        if not year or not mileage:
+            logger.warning(f"Missing required fields for analysis: year={year}, mileage={mileage}")
+            return None
+
+        # ===== 1. STATISTICAL ANALYSIS (existing model) =====
+        sample = {
+            "Model Yıl": year,
+            "Km": mileage,
+            "CCM": sahibinden_data.get('motor_hacmi') or "1500",
+            "Beygir Gucu": sahibinden_data.get('motor_gucu') or "100"
+        }
+
+        statistical_result = predict_buyability(sample)
+
+        # ===== 2. LLM MECHANICAL ANALYSIS =====
+        llm_result = None
+        car_data = {
+            "Model Yıl": year,
+            "Km": mileage,
+            "marka": sahibinden_data.get('marka'),
+            "seri": sahibinden_data.get('seri'),
+            "model": sahibinden_data.get('model'),
+            "yakit_tipi": sahibinden_data.get('yakit_tipi'),
+            "vites": sahibinden_data.get('vites'),
+            "kasa_tipi": sahibinden_data.get('kasa_tipi'),
+            "motor_hacmi": sahibinden_data.get('motor_hacmi'),
+            "motor_gucu": sahibinden_data.get('motor_gucu'),
+            "cekis": sahibinden_data.get('cekis'),
+            "fiyat": sahibinden_data.get('fiyat')
+        }
+
+        if sahibinden_data.get('marka') or sahibinden_data.get('model'):
+            try:
+                llm_result = await llm_analyzer.analyze_mechanical_reliability(car_data)
+            except Exception as llm_error:
+                logger.warning(f"LLM analysis failed: {llm_error}")
+
+        # ===== 3. CRASH SCORE ANALYSIS =====
+        crash_score_result = None
+        parts_data = sahibinden_data.get('boyali_degisen', {})
+
+        parsed_painted = parts_data.get('boyali', []) if isinstance(parts_data, dict) else None
+        parsed_changed = parts_data.get('degisen', []) if isinstance(parts_data, dict) else None
+        parsed_local_painted = parts_data.get('lokal_boyali', []) if isinstance(parts_data, dict) else None
+
+        if parsed_painted or parsed_changed or parsed_local_painted:
+            try:
+                crash_result = calculate_crash_score(
+                    painted_parts=parsed_painted,
+                    changed_parts=parsed_changed,
+                    local_painted_parts=parsed_local_painted
+                )
+                crash_score_result = crash_score_to_dict(crash_result)
+            except Exception as crash_error:
+                logger.warning(f"Crash score calculation failed: {crash_error}")
+        else:
+            crash_score_result = {
+                "score": 100,
+                "total_deduction": 0,
+                "deductions": [],
+                "summary": "Boyali veya degisen parca bilgisi mevcut degil. Arac orijinal durumda kabul edildi.",
+                "risk_level": "Bilinmiyor",
+                "verdict": "Parca bilgisi yok - Orijinal kabul edildi"
+            }
+
+        # ===== 4. CALCULATE BUYABILITY SCORE =====
+        statistical_score = statistical_result.get('risk_score') if statistical_result else None
+        mechanical_score_val = None
+        if llm_result and llm_result.get('scores'):
+            mechanical_score_val = llm_result['scores'].get('mechanical_score')
+        crash_score_val = crash_score_result.get('score') if crash_score_result else None
+
+        buyability_result = None
+        try:
+            buyability_calc = calculate_buyability_score(
+                statistical_score=statistical_score,
+                mechanical_score=mechanical_score_val,
+                crash_score=crash_score_val
+            )
+            buyability_result = buyability_score_to_dict(buyability_calc)
+        except Exception as buyability_error:
+            logger.warning(f"Buyability score calculation failed: {buyability_error}")
+
+        return {
+            "buyability_score": buyability_result,
+            "statistical_analysis": statistical_result,
+            "llm_analysis": llm_result,
+            "crash_score_analysis": crash_score_result
+        }
+
+    except Exception as e:
+        logger.error(f"Error performing analysis on listing: {str(e)}")
+        return None
+
+
+def save_listing_to_firestore(sahibinden_data: Dict[str, Any], user_id: Optional[str], result_images: List[str] = None, analysis_results: Optional[Dict[str, Any]] = None) -> bool:
     """Save the crawled listing to Firestore"""
     try:
         from storage.firebase_repository import FirestoreRepository
@@ -90,6 +196,13 @@ def save_listing_to_firestore(sahibinden_data: Dict[str, Any], user_id: Optional
             'painted_parts': sahibinden_data.get('boyali_degisen'),
             'data_quality_score': 0.8,  # Default score
         }
+
+        # Add analysis results if available
+        if analysis_results:
+            cleaned_data['buyability_score'] = analysis_results.get('buyability_score')
+            cleaned_data['statistical_analysis'] = analysis_results.get('statistical_analysis')
+            cleaned_data['llm_analysis'] = analysis_results.get('llm_analysis')
+            cleaned_data['crash_score_analysis'] = analysis_results.get('crash_score_analysis')
 
         # Get images - prefer result_images, fallback to gorseller from sahibinden_data
         images = result_images or sahibinden_data.get('gorseller', [])
@@ -140,6 +253,18 @@ async def perform_crawl(job_id: str, request: CrawlRequest, user_id: Optional[st
         # Map crawler result to job storage format
         if result.get("status") == "success":
             jobs_storage[job_id]["status"] = JobStatus.COMPLETED
+
+            # Perform analysis on the listing before storing
+            sahibinden_data = result.get("sahibinden_listing")
+            analysis_results = None
+            if sahibinden_data:
+                logger.info("Starting analysis of crawled listing...")
+                analysis_results = await perform_analysis_on_listing(sahibinden_data)
+                if analysis_results:
+                    logger.success("Analysis completed successfully")
+                else:
+                    logger.warning("Analysis returned no results")
+
             jobs_storage[job_id]["result"] = {
                 "html": result.get("html"),
                 "text": result.get("text"),
@@ -152,18 +277,19 @@ async def perform_crawl(job_id: str, request: CrawlRequest, user_id: Optional[st
                 "response_time": result.get("response_time"),
                 "captcha_solved": result.get("captcha_solved", False),
                 "method": result.get("method"),
-                "crawl_duration": result.get("crawl_duration")
+                "crawl_duration": result.get("crawl_duration"),
+                # Include analysis results in the job result
+                "analysis": analysis_results
             }
 
             # Save to Firestore if we have sahibinden data
-            sahibinden_data = result.get("sahibinden_listing")
             result_images = result.get("images", [])
             logger.info(f"Crawl completed. sahibinden_data present: {sahibinden_data is not None}, user_id: {user_id}, images count: {len(result_images)}")
             if sahibinden_data:
                 logger.info(f"sahibinden_data keys: {sahibinden_data.keys() if isinstance(sahibinden_data, dict) else 'not a dict'}")
                 logger.info(f"ilan_no: {sahibinden_data.get('ilan_no') if isinstance(sahibinden_data, dict) else 'N/A'}")
             if sahibinden_data and sahibinden_data.get("ilan_no"):
-                save_listing_to_firestore(sahibinden_data, user_id, result_images=result_images)
+                save_listing_to_firestore(sahibinden_data, user_id, result_images=result_images, analysis_results=analysis_results)
             else:
                 logger.warning(f"No sahibinden_listing data or missing ilan_no, skipping Firestore save")
         else:

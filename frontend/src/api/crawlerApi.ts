@@ -262,6 +262,27 @@ export async function analyzeListing(params: Record<string, string>): Promise<an
 }
 
 /**
+ * SAVE ANALYSIS RESULTS
+ * POST /api/v1/listings/{listing_id}/save-analysis
+ * Used to cache analysis results in the database for old listings
+ */
+export async function saveListingAnalysis(listingId: string, analysisData: Record<string, any>): Promise<any> {
+  const auth = getAuth();
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
+
+  const response = await api.post(`/listings/${listingId}/save-analysis`, analysisData, {
+    headers: {
+      "user-id": user.uid
+    }
+  });
+  return response.data;
+}
+
+/**
  * Export as object (opsiyonel kullanım)
  */
 export const crawlerApi = {

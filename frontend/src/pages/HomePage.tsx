@@ -8,10 +8,24 @@ import "./HomePage.css";
 
 export default function HomePage() {
   const [listings, setListings] = useState<CarListing[]>([]);
+  const [filteredListings, setFilteredListings] = useState<CarListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [authReady, setAuthReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Filter states
+  const [filterBrand, setFilterBrand] = useState<string>('');
+  const [filterMinPrice, setFilterMinPrice] = useState<number | null>(null);
+  const [filterMaxPrice, setFilterMaxPrice] = useState<number | null>(null);
+  const [filterMinYear, setFilterMinYear] = useState<number | null>(null);
+  const [filterMaxYear, setFilterMaxYear] = useState<number | null>(null);
+  const [filterMinScore, setFilterMinScore] = useState<number | null>(null);
+
+  // Sort state
+  const [sortBy, setSortBy] = useState<string>('date-desc'); // date-desc, price-asc, price-desc, year-asc, year-desc, mileage-asc, mileage-desc, score-asc, score-desc
+
   const navigate = useNavigate();
 
   // Wait for Firebase Auth to be ready
@@ -65,6 +79,74 @@ export default function HomePage() {
   const handleNewCrawl = () => {
     navigate("/crawl");
   };
+
+  // Apply filters and sorting whenever listings or filter states change
+  useEffect(() => {
+    let filtered = [...listings];
+
+    // Apply filters
+    if (filterBrand) {
+      filtered = filtered.filter((l) =>
+        (l.brand || "").toLowerCase().includes(filterBrand.toLowerCase())
+      );
+    }
+
+    if (filterMinPrice !== null) {
+      filtered = filtered.filter((l) => (l.price || 0) >= filterMinPrice);
+    }
+
+    if (filterMaxPrice !== null) {
+      filtered = filtered.filter((l) => (l.price || 0) <= filterMaxPrice);
+    }
+
+    if (filterMinYear !== null) {
+      filtered = filtered.filter((l) => (l.year || 0) >= filterMinYear);
+    }
+
+    if (filterMaxYear !== null) {
+      filtered = filtered.filter((l) => (l.year || 0) <= filterMaxYear);
+    }
+
+    if (filterMinScore !== null) {
+      filtered = filtered.filter((l) => {
+        const score = (l as any).buyability_score?.score || 0;
+        return score >= filterMinScore;
+      });
+    }
+
+    // Apply sorting
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case "price-asc":
+          return (a.price || 0) - (b.price || 0);
+        case "price-desc":
+          return (b.price || 0) - (a.price || 0);
+        case "year-asc":
+          return (a.year || 0) - (b.year || 0);
+        case "year-desc":
+          return (b.year || 0) - (a.year || 0);
+        case "mileage-asc":
+          return (a.mileage || 0) - (b.mileage || 0);
+        case "mileage-desc":
+          return (b.mileage || 0) - (a.mileage || 0);
+        case "score-asc":
+          return (
+            ((a as any).buyability_score?.score || 0) -
+            ((b as any).buyability_score?.score || 0)
+          );
+        case "score-desc":
+          return (
+            ((b as any).buyability_score?.score || 0) -
+            ((a as any).buyability_score?.score || 0)
+          );
+        case "date-desc":
+        default:
+          return new Date(b.crawled_at || "").getTime() - new Date(a.crawled_at || "").getTime();
+      }
+    });
+
+    setFilteredListings(sorted);
+  }, [listings, filterBrand, filterMinPrice, filterMaxPrice, filterMinYear, filterMaxYear, filterMinScore, sortBy]);
 
   const formatPrice = (price?: number) => {
     if (!price) return "N/A";
@@ -236,8 +318,135 @@ export default function HomePage() {
             </button>
           </div>
         ) : (
-          <div className="listings-grid">
-            {listings.map((listing) => (
+          <>
+            {/* Filter and Sort Controls */}
+            <div className="filter-sort-container">
+              <button
+                className="filter-toggle-btn"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="4" y1="6" x2="20" y2="6" />
+                  <line x1="4" y1="12" x2="20" y2="12" />
+                  <line x1="4" y1="18" x2="20" y2="18" />
+                </svg>
+                Filters & Sort
+              </button>
+
+              {/* Sort Control */}
+              <select
+                className="sort-select"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+              >
+                <option value="date-desc">Newest First</option>
+                <option value="date-asc">Oldest First</option>
+                <option value="price-asc">Price: Low to High</option>
+                <option value="price-desc">Price: High to Low</option>
+                <option value="year-desc">Year: Newest</option>
+                <option value="year-asc">Year: Oldest</option>
+                <option value="mileage-asc">Mileage: Low to High</option>
+                <option value="mileage-desc">Mileage: High to Low</option>
+                <option value="score-desc">Score: High to Low</option>
+                <option value="score-asc">Score: Low to High</option>
+              </select>
+            </div>
+
+            {/* Filter Panel */}
+            {showFilters && (
+              <div className="filter-panel">
+                <div className="filter-group">
+                  <label>Brand</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., BMW, Mercedes"
+                    value={filterBrand}
+                    onChange={(e) => setFilterBrand(e.target.value)}
+                  />
+                </div>
+
+                <div className="filter-row">
+                  <div className="filter-group">
+                    <label>Min Price (₺)</label>
+                    <input
+                      type="number"
+                      placeholder="Min"
+                      value={filterMinPrice ?? ""}
+                      onChange={(e) => setFilterMinPrice(e.target.value ? parseFloat(e.target.value) : null)}
+                    />
+                  </div>
+                  <div className="filter-group">
+                    <label>Max Price (₺)</label>
+                    <input
+                      type="number"
+                      placeholder="Max"
+                      value={filterMaxPrice ?? ""}
+                      onChange={(e) => setFilterMaxPrice(e.target.value ? parseFloat(e.target.value) : null)}
+                    />
+                  </div>
+                </div>
+
+                <div className="filter-row">
+                  <div className="filter-group">
+                    <label>Min Year</label>
+                    <input
+                      type="number"
+                      placeholder="Min"
+                      value={filterMinYear ?? ""}
+                      onChange={(e) => setFilterMinYear(e.target.value ? parseInt(e.target.value) : null)}
+                    />
+                  </div>
+                  <div className="filter-group">
+                    <label>Max Year</label>
+                    <input
+                      type="number"
+                      placeholder="Max"
+                      value={filterMaxYear ?? ""}
+                      onChange={(e) => setFilterMaxYear(e.target.value ? parseInt(e.target.value) : null)}
+                    />
+                  </div>
+                </div>
+
+                <div className="filter-group">
+                  <label>Min Score</label>
+                  <input
+                    type="number"
+                    placeholder="0-100"
+                    min="0"
+                    max="100"
+                    value={filterMinScore ?? ""}
+                    onChange={(e) => setFilterMinScore(e.target.value ? parseFloat(e.target.value) : null)}
+                  />
+                </div>
+
+                <button
+                  className="clear-filters-btn"
+                  onClick={() => {
+                    setFilterBrand("");
+                    setFilterMinPrice(null);
+                    setFilterMaxPrice(null);
+                    setFilterMinYear(null);
+                    setFilterMaxYear(null);
+                    setFilterMinScore(null);
+                  }}
+                >
+                  Clear All Filters
+                </button>
+              </div>
+            )}
+
+            {/* Results Count and Listings Grid */}
+            {filteredListings.length === 0 ? (
+              <div className="no-results">
+                <p>No listings match your filters. Try adjusting your criteria.</p>
+              </div>
+            ) : (
+              <>
+                <div className="results-info">
+                  Showing {filteredListings.length} of {listings.length} listings
+                </div>
+                <div className="listings-grid">
+                  {filteredListings.map((listing) => (
               <div
                 key={listing.listing_id}
                 className="listing-card clickable"
@@ -252,7 +461,23 @@ export default function HomePage() {
                   ) : (
                     <div className="no-image">No Image</div>
                   )}
-                  {listing.data_quality_score && (
+                  {/* Final Score Badge - Top Right */}
+                  {(listing as any).buyability_score && (listing as any).buyability_score.score !== undefined ? (
+                    <div
+                      className={`quality-badge ${
+                        (listing as any).buyability_score.score >= 70
+                          ? "quality-high"
+                          : (listing as any).buyability_score.score >= 50
+                          ? "quality-medium"
+                          : "quality-low"
+                      }`}
+                    >
+                      <span className="quality-score">
+                        {Math.round((listing as any).buyability_score.score)}
+                      </span>
+                      <span className="quality-label">Final</span>
+                    </div>
+                  ) : listing.data_quality_score ? (
                     <div
                       className={`quality-badge ${
                         listing.data_quality_score >= 0.7
@@ -265,9 +490,58 @@ export default function HomePage() {
                       <span className="quality-score">
                         {Math.round(listing.data_quality_score * 100)}
                       </span>
-                      <span className="quality-label">Score</span>
+                      <span className="quality-label">Quality</span>
                     </div>
-                  )}
+                  ) : null}
+
+                  {/* Final Score Badge - Top Left (Combined Score from 3 Approaches) */}
+                  {(() => {
+                    const bs = (listing as any).buyability_score;
+
+                    // Try multiple ways to extract the score
+                    let score: number | null = null;
+
+                    if (typeof bs === 'number') {
+                      score = bs;
+                    } else if (bs && typeof bs === 'object') {
+                      // Try different possible field names and structures
+                      if (bs.score !== undefined && bs.score !== null) {
+                        score = Number(bs.score);
+                      } else if (bs.scores?.buyability_score !== undefined) {
+                        score = Number(bs.scores.buyability_score);
+                      } else if (bs.final_score !== undefined) {
+                        score = Number(bs.final_score);
+                      } else if (bs.buyability_score !== undefined) {
+                        score = Number(bs.buyability_score);
+                      }
+                    }
+
+                    // Validate score is a valid number
+                    if (score !== null && !isNaN(score) && score >= 0 && score <= 100) {
+                      return (
+                        <div
+                          className={`final-score-badge ${
+                            score >= 70
+                              ? "score-high"
+                              : score >= 50
+                              ? "score-medium"
+                              : "score-low"
+                          }`}
+                          title={`Final Score: Combines Statistical (${(listing as any).statistical_analysis?.risk_score ? Math.round((listing as any).statistical_analysis.risk_score) : '?'}%), Mechanical (${(listing as any).llm_analysis?.scores?.mechanical_score ? Math.round((listing as any).llm_analysis.scores.mechanical_score) : '?'}%), & Crash Analysis (${(listing as any).crash_score_analysis?.score ? Math.round((listing as any).crash_score_analysis.score) : '?'}%)`}
+                        >
+                          <span className="score-number">{Math.round(score)}</span>
+                          <span className="score-label">Final</span>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="final-score-badge score-pending" title="Analysis pending - Click to analyze">
+                        <span className="score-number">—</span>
+                        <span className="score-label">Score</span>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div className="listing-content">
                   <h3 className="listing-title">{getCarTitle(listing)}</h3>
@@ -328,8 +602,11 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </>
         )}
       </main>
 

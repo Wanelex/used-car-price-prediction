@@ -4,6 +4,7 @@ Endpoints for fetching and managing user's crawled car listings
 """
 from fastapi import APIRouter, HTTPException, Header, Query
 from typing import Optional, List, Dict, Any
+from datetime import datetime
 import sys
 import os
 
@@ -30,13 +31,27 @@ CLEAN_FIELDS = [
     'engine_volume', 'drive_type', 'color', 'vehicle_condition', 'seller_type',
     'location', 'warranty', 'heavy_damage', 'plate_origin', 'trade_option',
     'title', 'description', 'phone', 'technical_specs', 'features', 'painted_parts',
-    'data_quality_score', 'is_valid', 'images', 'user_id', 'crawled_at', 'updated_at'
+    'data_quality_score', 'is_valid', 'images', 'user_id', 'crawled_at', 'updated_at',
+    # Analysis results - store cached analysis to avoid re-analyzing
+    'buyability_score', 'statistical_analysis', 'llm_analysis', 'crash_score_analysis'
 ]
 
 
 def filter_clean_data(listing: Dict[str, Any]) -> Dict[str, Any]:
     """Filter listing to return only cleaned fields"""
-    return {key: listing[key] for key in CLEAN_FIELDS if key in listing}
+    clean = {key: listing[key] for key in CLEAN_FIELDS if key in listing}
+
+    # Normalize images: convert from {url, is_primary} objects to just URL strings
+    if 'images' in clean and clean['images']:
+        normalized_images = []
+        for img in clean['images']:
+            if isinstance(img, dict) and 'url' in img:
+                normalized_images.append(img['url'])
+            elif isinstance(img, str):
+                normalized_images.append(img)
+        clean['images'] = normalized_images
+
+    return clean
 
 
 def get_firebase_repo():
@@ -354,6 +369,63 @@ async def analyze_listing(
         raise
     except Exception as e:
         logger.error(f"Error analyzing listing {listing_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/listings/{listing_id}/save-analysis", tags=["Listings"])
+async def save_listing_analysis(
+    listing_id: str,
+    analysis_data: Dict[str, Any],
+    user_id: str = Header(..., description="User ID from Firebase")
+):
+    """
+    Save analysis results to a listing (to avoid re-analyzing).
+    This endpoint is used when analysis is performed on the frontend
+    for old listings that don't have cached analysis results.
+
+    - **listing_id**: The listing ID to update
+    - **analysis_data**: Analysis results to save
+    - **user_id**: Firebase user ID (from Authorization header)
+    """
+    try:
+        repo = get_firebase_repo()
+        listing = repo.get_by_listing_id(listing_id)
+
+        if not listing:
+            raise HTTPException(status_code=404, detail="Listing not found")
+
+        # Verify user owns this listing
+        if listing.get('user_id') != user_id:
+            raise HTTPException(status_code=403, detail="Unauthorized")
+
+        # Update listing with analysis results
+        listing.update({
+            'buyability_score': analysis_data.get('buyability_score'),
+            'statistical_analysis': analysis_data.get('statistical_analysis'),
+            'llm_analysis': analysis_data.get('llm_analysis'),
+            'crash_score_analysis': analysis_data.get('crash_score_analysis'),
+            'updated_at': datetime.utcnow()
+        })
+
+        # Save back to Firestore
+        repo.db.collection('car_listings').document(listing_id).update({
+            'buyability_score': analysis_data.get('buyability_score'),
+            'statistical_analysis': analysis_data.get('statistical_analysis'),
+            'llm_analysis': analysis_data.get('llm_analysis'),
+            'crash_score_analysis': analysis_data.get('crash_score_analysis'),
+            'updated_at': datetime.utcnow()
+        })
+
+        logger.success(f"Saved analysis results for listing {listing_id}")
+
+        return {
+            "status": "success",
+            "message": f"Analysis results saved for listing {listing_id}"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error saving analysis for listing {listing_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
